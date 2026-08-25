@@ -1,24 +1,46 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext'
+import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
 
 /**
  * Raíz de la aplicación.
- * Las rutas de cada módulo se incorporan a medida que avanzan las historias
- * de usuario. Todo el texto visible está en inglés.
+ * Cada rol es redirigido a su menú principal tras iniciar sesión (HU01).
  */
 export default function App() {
   return (
-    <Routes>
-      <Route
-        path="*"
-        element={
-          <main className="flex h-full items-center justify-center p-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold text-slate-900">Bar Inventory</h1>
-              <p className="mt-2 text-sm text-slate-500">Cafe Colombia Bar</p>
-            </div>
-          </main>
-        }
-      />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashier"
+          element={
+            <ProtectedRoute roles={['CASHIER']}>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/waiter"
+          element={
+            <ProtectedRoute roles={['WAITER']}>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </AuthProvider>
   )
 }

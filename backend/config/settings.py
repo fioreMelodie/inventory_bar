@@ -49,9 +49,16 @@ THIRD_PARTY_APPS = [
     "corsheaders",
 ]
 
-LOCAL_APPS = []
+LOCAL_APPS = [
+    "apps.audit",
+    "apps.accounts",
+    "apps.authentication",
+]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# Modelo de usuario propio: incorpora rol y sede asignada (Módulo 3).
+AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
