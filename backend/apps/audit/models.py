@@ -16,6 +16,7 @@ class EventType(models.TextChoices):
     LOGIN_SUCCESS = "LOGIN_SUCCESS", "Inicio de sesión exitoso"
     LOGIN_FAILED = "LOGIN_FAILED", "Intento de inicio de sesión fallido"
     LOGIN_BLOCKED = "LOGIN_BLOCKED", "Acceso bloqueado por intentos fallidos"
+    SESSION_TIMEOUT = "SESSION_TIMEOUT", "Cierre de sesión por inactividad"
 
 
 class AuditEventQuerySet(models.QuerySet):

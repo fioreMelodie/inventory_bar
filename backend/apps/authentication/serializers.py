@@ -18,3 +18,9 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "username", "full_name", "role")
         read_only_fields = fields
+
+
+class SessionTokenSerializer(serializers.Serializer):
+    """Refresh token asociado a la sesión que se desea cerrar."""
+
+    refresh = serializers.CharField()
