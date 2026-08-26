@@ -42,6 +42,7 @@ class UserSession(models.Model):
 
     class ClosingReason(models.TextChoices):
         ACTIVE = "ACTIVE", "Sesión activa"
+        INACTIVITY = "INACTIVITY", "Cierre automático por inactividad"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -74,3 +75,12 @@ class UserSession(models.Model):
     @property
     def is_active(self):
         return self.ended_at is None
+
+    def close(self, reason):
+        """Cierra la sesión dejando constancia del motivo."""
+        if self.ended_at is not None:
+            return self
+        self.ended_at = timezone.now()
+        self.closing_reason = reason
+        self.save(update_fields=["ended_at", "closing_reason"])
+        return self

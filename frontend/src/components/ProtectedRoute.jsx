@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { HOME_ROUTE_BY_ROLE } from '../context/AuthContext'
+import useInactivityTimer from '../hooks/useInactivityTimer'
+import { HOME_ROUTE_BY_ROLE, useAuth } from '../context/AuthContext'
 
 /**
  * Restringe el acceso a las rutas privadas.
@@ -8,7 +8,10 @@ import { HOME_ROUTE_BY_ROLE } from '../context/AuthContext'
  * La verificación definitiva se hace siempre en el servidor.
  */
 export default function ProtectedRoute({ children, roles }) {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, expireSessionByInactivity } = useAuth()
+
+  // HU02 - Cierre automático tras 3 minutos sin interacción.
+  useInactivityTimer(expireSessionByInactivity, isAuthenticated)
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />

@@ -150,7 +150,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.authentication.authentication.SessionAwareJWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -165,7 +165,9 @@ REST_FRAMEWORK = {
 # --------------------------------------------------------------------------
 # JWT
 # --------------------------------------------------------------------------
-# La duración del access token se define en la HU02 (3 minutos de inactividad).
+# El access token dura lo mismo que el tiempo de inactividad permitido (HU02).
+# La invalidación efectiva de la sesión se verifica además en servidor mediante
+# SessionAwareJWTAuthentication.
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=3),
     "REFRESH_TOKEN_LIFETIME": timedelta(hours=12),

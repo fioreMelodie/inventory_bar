@@ -8,7 +8,7 @@ import { getErrorMessage } from '../services/api'
  * Todo el texto visible está en inglés (requisito no funcional).
  */
 export default function LoginPage() {
-  const { login, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, user, sessionNotice, setSessionNotice } = useAuth()
   const navigate = useNavigate()
 
   const [username, setUsername] = useState('')
@@ -39,6 +39,7 @@ export default function LoginPage() {
       return
     }
 
+    setSessionNotice('')
     setSubmitting(true)
     try {
       const authenticatedUser = await login(username.trim(), password)
@@ -103,6 +104,12 @@ export default function LoginPage() {
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-50"
             />
           </div>
+
+          {sessionNotice && !error && (
+            <p role="status" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {sessionNotice}
+            </p>
+          )}
 
           {error && (
             <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

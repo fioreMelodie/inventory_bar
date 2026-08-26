@@ -8,14 +8,16 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.audit.models import EventType
 from apps.audit.services import get_client_ip, record_event
 
+from .authentication import close_session_by_inactivity
 from .models import UserSession
-from .serializers import AuthenticatedUserSerializer, LoginSerializer
+from .serializers import AuthenticatedUserSerializer, LoginSerializer, SessionTokenSerializer
 from .services import get_lockout_remaining, register_attempt
 
 # Los mensajes devueltos por la API se muestran directamente al usuario, por lo
@@ -145,3 +147,48 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         return Response(AuthenticatedUserSerializer(request.user).data)
+
+
+class SessionExpireView(APIView):
+    """
+    POST /api/auth/session/expire/
+
+    HU02: cierre automático de sesión por inactividad.
+
+    El frontend invoca este endpoint cuando su temporizador local alcanza los
+    3 minutos sin interacción. Se acepta el refresh token en el cuerpo porque
+    para ese momento el access token puede haber expirado.
+
+    El servidor invalida la sesión de forma definitiva: cierra el registro de
+    sesión y revoca el refresh token, de modo que la invalidación no depende
+    del frontend.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = SessionTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+        except TokenError:
+            # Un token ya expirado o revocado equivale a una sesión cerrada.
+            return Response(
+                {"detail": "Session already closed."}, status=status.HTTP_200_OK
+            )
+
+        session = UserSession.objects.filter(id=token.get("session_id")).first()
+        if session is not None and session.is_active:
+            close_session_by_inactivity(session, request=request)
+
+        # Revocar el refresh token impide obtener nuevos access tokens.
+        try:
+            token.blacklist()
+        except AttributeError:  # pragma: no cover - blacklist siempre habilitado
+            pass
+
+        return Response(
+            {"detail": "Session closed due to inactivity."}, status=status.HTTP_200_OK
+        )

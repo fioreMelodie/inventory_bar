@@ -26,10 +26,17 @@ function readStoredUser() {
   }
 }
 
+/** Avisos que se muestran en la pantalla de inicio de sesión. */
+export const SESSION_NOTICES = {
+  INACTIVITY: 'Your session was closed after 3 minutes of inactivity. Please sign in again.',
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredUser)
+  const [sessionNotice, setSessionNotice] = useState('')
 
   const login = useCallback(async (username, password) => {
+    setSessionNotice('')
     const { data } = await api.post('/auth/login/', { username, password })
     localStorage.setItem(TOKEN_KEY, data.access)
     localStorage.setItem(REFRESH_KEY, data.refresh)
@@ -45,9 +52,35 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  /**
+   * HU02 - El temporizador de inactividad venció: se notifica al servidor para
+   * que invalide la sesión y se limpia el estado local.
+   */
+  const expireSessionByInactivity = useCallback(async () => {
+    const refresh = localStorage.getItem(REFRESH_KEY)
+    if (refresh) {
+      try {
+        await api.post('/auth/session/expire/', { refresh })
+      } catch {
+        // Si la API no responde, la sesión igualmente se cierra en el
+        // navegador y el token quedará invalidado al vencer.
+      }
+    }
+    clearSession()
+    setSessionNotice(SESSION_NOTICES.INACTIVITY)
+  }, [clearSession])
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: Boolean(user), login, clearSession }),
-    [user, login, clearSession],
+    () => ({
+      user,
+      isAuthenticated: Boolean(user),
+      login,
+      clearSession,
+      expireSessionByInactivity,
+      sessionNotice,
+      setSessionNotice,
+    }),
+    [user, login, clearSession, expireSessionByInactivity, sessionNotice],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
