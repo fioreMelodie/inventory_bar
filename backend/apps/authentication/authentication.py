@@ -12,10 +12,8 @@ from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps.audit.models import EventType
-from apps.audit.services import record_event
-
 from .models import UserSession
+from .session_services import close_session
 
 # Tiempo de inactividad definido en la HU02 y en la propuesta comercial V1.1.
 # No es configurable por el usuario.
@@ -56,20 +54,5 @@ class SessionAwareJWTAuthentication(JWTAuthentication):
 
 
 def close_session_by_inactivity(session, request=None):
-    """
-    Cierra una sesión por inactividad y deja el registro de auditoría.
-
-    Los pedidos abiertos del usuario no se ven afectados: permanecen en estado
-    ABIERTO para ser gestionados posteriormente (criterio de la HU02).
-    """
-    session.close(UserSession.ClosingReason.INACTIVITY)
-    record_event(
-        event_type=EventType.SESSION_TIMEOUT,
-        username=session.user.username,
-        user=session.user,
-        entity="UserSession",
-        entity_id=session.id,
-        description="Cierre automático de sesión tras 3 minutos de inactividad.",
-        request=request,
-    )
-    return session
+    """Cierra una sesión por inactividad (HU02)."""
+    return close_session(session, UserSession.ClosingReason.INACTIVITY, request=request)

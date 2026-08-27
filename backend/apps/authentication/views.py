@@ -17,8 +17,14 @@ from apps.audit.services import get_client_ip, record_event
 
 from .authentication import close_session_by_inactivity
 from .models import UserSession
-from .serializers import AuthenticatedUserSerializer, LoginSerializer, SessionTokenSerializer
+from .serializers import (
+    AuthenticatedUserSerializer,
+    LoginSerializer,
+    LogoutSerializer,
+    SessionTokenSerializer,
+)
 from .services import get_lockout_remaining, register_attempt
+from .session_services import close_session
 
 # Los mensajes devueltos por la API se muestran directamente al usuario, por lo
 # que están en inglés (requisito no funcional: todo el frontend en inglés).
@@ -192,3 +198,43 @@ class SessionExpireView(APIView):
         return Response(
             {"detail": "Session closed due to inactivity."}, status=status.HTTP_200_OK
         )
+
+
+class LogoutView(APIView):
+    """
+    POST /api/auth/logout/
+
+    HU03: cierre de sesión manual y manejo de pérdida de conexión.
+
+    El motivo del cierre se recibe en el cuerpo y determina el evento que queda
+    en el log de auditoría:
+      - MANUAL: el usuario pulsó "Sign out".
+      - DISCONNECTION: el frontend detectó la pérdida de conexión.
+
+    El cierre no elimina datos no guardados: los pedidos activos permanecen en
+    la base de datos.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reason = serializer.validated_data["reason"]
+
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+        except TokenError:
+            return Response({"detail": "Session already closed."}, status=status.HTTP_200_OK)
+
+        session = UserSession.objects.filter(id=token.get("session_id")).first()
+        if session is not None:
+            close_session(session, reason, request=request)
+
+        try:
+            token.blacklist()
+        except AttributeError:  # pragma: no cover - blacklist siempre habilitado
+            pass
+
+        return Response({"detail": "Signed out successfully."}, status=status.HTTP_200_OK)

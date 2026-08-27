@@ -3,6 +3,8 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 
+from .models import UserSession
+
 
 class LoginSerializer(serializers.Serializer):
     """Credenciales de acceso enviadas desde el formulario de login."""
@@ -24,3 +26,16 @@ class SessionTokenSerializer(serializers.Serializer):
     """Refresh token asociado a la sesión que se desea cerrar."""
 
     refresh = serializers.CharField()
+
+
+class LogoutSerializer(serializers.Serializer):
+    """Cierre de sesión indicando el motivo, para su trazabilidad en auditoría."""
+
+    refresh = serializers.CharField()
+    reason = serializers.ChoiceField(
+        choices=[
+            UserSession.ClosingReason.MANUAL,
+            UserSession.ClosingReason.DISCONNECTION,
+        ],
+        default=UserSession.ClosingReason.MANUAL,
+    )
