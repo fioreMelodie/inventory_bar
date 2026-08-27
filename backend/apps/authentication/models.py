@@ -43,6 +43,8 @@ class UserSession(models.Model):
     class ClosingReason(models.TextChoices):
         ACTIVE = "ACTIVE", "Sesión activa"
         INACTIVITY = "INACTIVITY", "Cierre automático por inactividad"
+        MANUAL = "MANUAL", "Cierre manual por el usuario"
+        DISCONNECTION = "DISCONNECTION", "Cierre por pérdida de conexión"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

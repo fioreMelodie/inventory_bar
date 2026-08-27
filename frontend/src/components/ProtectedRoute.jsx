@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import useInactivityTimer from '../hooks/useInactivityTimer'
 import { HOME_ROUTE_BY_ROLE, useAuth } from '../context/AuthContext'
+import AppLayout from './AppLayout'
 
 /**
  * Restringe el acceso a las rutas privadas.
@@ -21,5 +22,5 @@ export default function ProtectedRoute({ children, roles }) {
     return <Navigate to={HOME_ROUTE_BY_ROLE[user.role] || '/login'} replace />
   }
 
-  return children
+  return <AppLayout>{children}</AppLayout>
 }

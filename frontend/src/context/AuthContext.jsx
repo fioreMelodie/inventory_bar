@@ -29,6 +29,7 @@ function readStoredUser() {
 /** Avisos que se muestran en la pantalla de inicio de sesión. */
 export const SESSION_NOTICES = {
   INACTIVITY: 'Your session was closed after 3 minutes of inactivity. Please sign in again.',
+  DISCONNECTION: 'Your session was closed because the connection was lost. Your data is safe.',
 }
 
 export function AuthProvider({ children }) {
@@ -70,6 +71,38 @@ export function AuthProvider({ children }) {
     setSessionNotice(SESSION_NOTICES.INACTIVITY)
   }, [clearSession])
 
+  /**
+   * Cierra la sesión en el servidor indicando el motivo, para que quede
+   * correctamente diferenciado en el log de auditoría (HU03).
+   */
+  const closeSession = useCallback(
+    async (reason) => {
+      const refresh = localStorage.getItem(REFRESH_KEY)
+      if (refresh) {
+        try {
+          await api.post('/auth/logout/', { refresh, reason })
+        } catch {
+          // Sin conexión no es posible notificar al servidor; la sesión se
+          // cierra localmente y el token quedará invalidado al vencer.
+        }
+      }
+      clearSession()
+    },
+    [clearSession],
+  )
+
+  /** HU03 - El usuario pulsó "Sign out". */
+  const signOut = useCallback(async () => {
+    await closeSession('MANUAL')
+    setSessionNotice('')
+  }, [closeSession])
+
+  /** HU03 - El usuario confirmó el aviso de pérdida de conexión. */
+  const reportConnectionLoss = useCallback(async () => {
+    await closeSession('DISCONNECTION')
+    setSessionNotice(SESSION_NOTICES.DISCONNECTION)
+  }, [closeSession])
+
   const value = useMemo(
     () => ({
       user,
@@ -77,10 +110,20 @@ export function AuthProvider({ children }) {
       login,
       clearSession,
       expireSessionByInactivity,
+      signOut,
+      reportConnectionLoss,
       sessionNotice,
       setSessionNotice,
     }),
-    [user, login, clearSession, expireSessionByInactivity, sessionNotice],
+    [
+      user,
+      login,
+      clearSession,
+      expireSessionByInactivity,
+      signOut,
+      reportConnectionLoss,
+      sessionNotice,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

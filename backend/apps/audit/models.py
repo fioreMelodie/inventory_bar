@@ -17,6 +17,8 @@ class EventType(models.TextChoices):
     LOGIN_FAILED = "LOGIN_FAILED", "Intento de inicio de sesión fallido"
     LOGIN_BLOCKED = "LOGIN_BLOCKED", "Acceso bloqueado por intentos fallidos"
     SESSION_TIMEOUT = "SESSION_TIMEOUT", "Cierre de sesión por inactividad"
+    SESSION_LOGOUT = "SESSION_LOGOUT", "Cierre de sesión manual"
+    SESSION_DISCONNECTED = "SESSION_DISCONNECTED", "Cierre de sesión por pérdida de conexión"
 
 
 class AuditEventQuerySet(models.QuerySet):
