@@ -55,6 +55,16 @@ class UserSession(models.Model):
     # El rol se guarda en la sesión porque un cambio posterior de rol solo debe
     # aplicar a partir del siguiente inicio de sesión (criterio de la HU07).
     role = models.CharField("rol", max_length=20)
+    # La sede se guarda en la sesión porque un cambio posterior solo debe
+    # aplicar a partir del siguiente inicio de sesión (criterio de la HU07).
+    venue = models.ForeignKey(
+        "locations.Venue",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sessions",
+        verbose_name="sede",
+    )
     started_at = models.DateTimeField("fecha y hora de ingreso", default=timezone.now)
     last_activity_at = models.DateTimeField("última actividad", default=timezone.now)
     ended_at = models.DateTimeField("fecha y hora de cierre", null=True, blank=True)

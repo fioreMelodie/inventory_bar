@@ -114,6 +114,7 @@ class LoginView(APIView):
         session = UserSession.objects.create(
             user=user,
             role=user.role,
+            venue=user.venue,
             ip_address=ip_address,
         )
 

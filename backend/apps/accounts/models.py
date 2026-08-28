@@ -68,6 +68,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField("nombre completo", max_length=200)
     role = models.CharField("rol", max_length=20, choices=Role.choices)
 
+    # La sede asignada determina qué información puede ver el Cajero y el
+    # Mesero. El Administrador accede a todas las sedes, por lo que su sede
+    # puede quedar sin asignar.
+    venue = models.ForeignKey(
+        "locations.Venue",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="users",
+        verbose_name="sede asignada",
+    )
+
     # El campo activo controla el acceso: un usuario inactivo no puede
     # autenticarse, pero su historial de actividad se conserva íntegro.
     is_active = models.BooleanField("activo", default=True)

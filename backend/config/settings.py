@@ -51,6 +51,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.audit",
+    "apps.locations",
     "apps.accounts",
     "apps.authentication",
 ]
