@@ -1,6 +1,17 @@
+import { NavLink } from 'react-router-dom'
 import { ROLE_LABELS, useAuth } from '../context/AuthContext'
 import useConnectionStatus from '../hooks/useConnectionStatus'
 import ConnectionLostDialog from './ConnectionLostDialog'
+
+/** Opciones de menú disponibles para cada rol. */
+const MENU_BY_ROLE = {
+  ADMIN: [
+    { to: '/admin', label: 'Home', end: true },
+    { to: '/admin/venues', label: 'Venues' },
+  ],
+  CASHIER: [{ to: '/cashier', label: 'Home', end: true }],
+  WAITER: [{ to: '/waiter', label: 'Home', end: true }],
+}
 
 /**
  * Marco común de las pantallas autenticadas.
@@ -12,6 +23,7 @@ import ConnectionLostDialog from './ConnectionLostDialog'
 export default function AppLayout({ children }) {
   const { user, signOut, reportConnectionLoss } = useAuth()
   const isOnline = useConnectionStatus()
+  const menu = MENU_BY_ROLE[user.role] ?? []
 
   return (
     <div className="min-h-full">
@@ -23,6 +35,29 @@ export default function AppLayout({ children }) {
               {user.full_name} · {ROLE_LABELS[user.role]}
             </p>
           </div>
+
+          <nav className="order-last w-full sm:order-none sm:w-auto">
+            <ul className="flex gap-1">
+              {menu.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      [
+                        'block rounded-lg px-3 py-1.5 text-sm font-medium transition',
+                        isActive
+                          ? 'bg-brand-50 text-brand-700'
+                          : 'text-slate-600 hover:bg-slate-50',
+                      ].join(' ')
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
           <button
             type="button"

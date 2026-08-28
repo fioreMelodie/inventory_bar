@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import VenuesPage from './pages/VenuesPage'
 
 /**
  * Raíz de la aplicación.
@@ -22,6 +23,15 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/venues"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <VenuesPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/cashier"
           element={

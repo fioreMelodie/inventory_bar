@@ -16,9 +16,11 @@ class LoginSerializer(serializers.Serializer):
 class AuthenticatedUserSerializer(serializers.ModelSerializer):
     """Datos del usuario que el frontend necesita tras iniciar sesión."""
 
+    venue_name = serializers.CharField(source="venue.name", default=None, read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "username", "full_name", "role")
+        fields = ("id", "username", "full_name", "role", "venue", "venue_name")
         read_only_fields = fields
 
 
