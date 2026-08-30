@@ -38,3 +38,21 @@ class VenueSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A venue with this name already exists.")
 
         return name
+
+
+class VenueDeactivationSerializer(serializers.Serializer):
+    """
+    Confirmación de la inactivación de una sede.
+
+    Criterio de aceptación de la HU05: la inactivación requiere confirmación
+    explícita del Administrador, por lo que el cliente debe enviarla.
+    """
+
+    confirm = serializers.BooleanField()
+
+    def validate_confirm(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "You must confirm the deactivation of this venue."
+            )
+        return value

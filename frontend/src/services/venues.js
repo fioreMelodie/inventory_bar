@@ -15,6 +15,18 @@ export const venuesService = {
     const { data } = await api.post('/venues/', venue)
     return data
   },
+
+  /** Actualiza nombre y dirección de una sede (HU05). */
+  async update(id, venue) {
+    const { data } = await api.patch(`/venues/${id}/`, venue)
+    return data
+  },
+
+  /** Inactiva una sede. Requiere confirmación explícita (HU05). */
+  async deactivate(id) {
+    const { data } = await api.post(`/venues/${id}/deactivate/`, { confirm: true })
+    return data
+  },
 }
 
 /** Extrae el mensaje de error de un campo devuelto por la API. */

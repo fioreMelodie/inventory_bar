@@ -20,6 +20,8 @@ class EventType(models.TextChoices):
     SESSION_LOGOUT = "SESSION_LOGOUT", "Cierre de sesión manual"
     SESSION_DISCONNECTED = "SESSION_DISCONNECTED", "Cierre de sesión por pérdida de conexión"
     VENUE_CREATED = "VENUE_CREATED", "Creación de sede"
+    VENUE_UPDATED = "VENUE_UPDATED", "Modificación de sede"
+    VENUE_DEACTIVATED = "VENUE_DEACTIVATED", "Inactivación de sede"
 
 
 class AuditEventQuerySet(models.QuerySet):
