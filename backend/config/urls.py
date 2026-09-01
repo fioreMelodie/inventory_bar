@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/health/", health, name="health"),
     path("api/auth/", include("apps.authentication.urls")),
     path("api/", include("apps.locations.urls")),
+    path("api/", include("apps.accounts.urls")),
 ]

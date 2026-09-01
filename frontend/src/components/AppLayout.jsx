@@ -8,6 +8,7 @@ const MENU_BY_ROLE = {
   ADMIN: [
     { to: '/admin', label: 'Home', end: true },
     { to: '/admin/venues', label: 'Venues' },
+    { to: '/admin/users', label: 'Users' },
   ],
   CASHIER: [{ to: '/cashier', label: 'Home', end: true }],
   WAITER: [{ to: '/waiter', label: 'Home', end: true }],
