@@ -23,6 +23,7 @@ class EventType(models.TextChoices):
     VENUE_UPDATED = "VENUE_UPDATED", "Modificación de sede"
     VENUE_DEACTIVATED = "VENUE_DEACTIVATED", "Inactivación de sede"
     USER_CREATED = "USER_CREATED", "Creación de usuario"
+    USER_UPDATED = "USER_UPDATED", "Modificación de usuario"
 
 
 class AuditEventQuerySet(models.QuerySet):

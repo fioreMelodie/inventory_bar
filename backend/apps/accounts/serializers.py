@@ -114,3 +114,53 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """La contraseña se almacena cifrada; nunca en texto plano."""
         password = validated_data.pop("password")
         return User.objects.create_user(password=password, **validated_data)
+
+
+class UserUpdateSerializer(UserCreateSerializer):
+    """
+    Edición de una cuenta existente (HU07).
+
+    Se reutilizan las validaciones de creación (unicidad del nombre de usuario,
+    robustez de la contraseña y sede obligatoria según el rol). La contraseña
+    es opcional: solo se modifica si se envía.
+    """
+
+    password = serializers.CharField(
+        write_only=True, min_length=8, max_length=128, required=False
+    )
+
+    class Meta(UserCreateSerializer.Meta):
+        fields = UserCreateSerializer.Meta.fields
+
+    def validate_role(self, value):
+        """
+        Un Administrador no puede modificar su propio rol.
+
+        Criterio de aceptación de la HU07: solo otro Administrador puede
+        hacerlo, para evitar que el sistema quede sin ninguna cuenta con
+        privilegios de administración.
+        """
+        request = self.context.get("request")
+        if (
+            request is not None
+            and self.instance is not None
+            and self.instance.pk == request.user.pk
+            and value != self.instance.role
+        ):
+            raise serializers.ValidationError(
+                "You cannot change your own role. Another administrator must do it."
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        """Si se envía contraseña, se almacena cifrada de inmediato."""
+        password = validated_data.pop("password", None)
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+        return instance
