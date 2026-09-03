@@ -4,6 +4,7 @@ import { ROLES_REQUIRING_VENUE, ROLE_OPTIONS, usersService } from '../services/u
 import { getFieldError, venuesService } from '../services/venues'
 
 const EMPTY_FORM = {
+  id: null,
   full_name: '',
   username: '',
   password: '',
@@ -13,6 +14,7 @@ const EMPTY_FORM = {
 
 /**
  * HU06 - Crear usuario con rol y sede asignada.
+ * HU07 - Editar usuario.
  * Administración > Users. Acceso exclusivo del Administrador.
  */
 export default function UsersPage() {
@@ -27,6 +29,7 @@ export default function UsersPage() {
   const [feedback, setFeedback] = useState('')
 
   const venueRequired = ROLES_REQUIRING_VENUE.includes(form.role)
+  const isEditing = form.id !== null
 
   useEffect(() => {
     loadData()
@@ -48,8 +51,22 @@ export default function UsersPage() {
     }
   }
 
-  function openForm() {
+  function openCreateForm() {
     setForm(EMPTY_FORM)
+    setFormError('')
+    setFeedback('')
+    setShowForm(true)
+  }
+
+  function openEditForm(user) {
+    setForm({
+      id: user.id,
+      full_name: user.full_name,
+      username: user.username,
+      password: '',
+      role: user.role,
+      venue: user.venue ?? '',
+    })
     setFormError('')
     setFeedback('')
     setShowForm(true)
@@ -60,7 +77,8 @@ export default function UsersPage() {
     setFormError('')
     setFeedback('')
 
-    if (!form.full_name.trim() || !form.username.trim() || !form.password || !form.role) {
+    const passwordMissing = !isEditing && !form.password
+    if (!form.full_name.trim() || !form.username.trim() || passwordMissing || !form.role) {
       setFormError('Please complete all required fields.')
       return
     }
@@ -70,16 +88,24 @@ export default function UsersPage() {
       return
     }
 
+    const payload = {
+      full_name: form.full_name.trim(),
+      username: form.username.trim(),
+      role: form.role,
+      venue: form.venue || null,
+    }
+    // Al editar, la contraseña solo se envía si el Administrador la cambió.
+    if (form.password) payload.password = form.password
+
     setSaving(true)
     try {
-      await usersService.create({
-        full_name: form.full_name.trim(),
-        username: form.username.trim(),
-        password: form.password,
-        role: form.role,
-        venue: form.venue || null,
-      })
-      setFeedback('User "' + form.username.trim() + '" was created successfully.')
+      if (isEditing) {
+        await usersService.update(form.id, payload)
+        setFeedback('User "' + payload.username + '" was updated successfully.')
+      } else {
+        await usersService.create(payload)
+        setFeedback('User "' + payload.username + '" was created successfully.')
+      }
       setShowForm(false)
       setForm(EMPTY_FORM)
       await loadData()
@@ -88,7 +114,8 @@ export default function UsersPage() {
         getFieldError(requestError, 'username') ||
           getFieldError(requestError, 'password') ||
           getFieldError(requestError, 'venue') ||
-          getErrorMessage(requestError, 'Unable to create the user.'),
+          getFieldError(requestError, 'role') ||
+          getErrorMessage(requestError, 'Unable to save the user.'),
       )
     } finally {
       setSaving(false)
@@ -107,7 +134,7 @@ export default function UsersPage() {
 
         <button
           type="button"
-          onClick={showForm ? () => setShowForm(false) : openForm}
+          onClick={showForm ? () => setShowForm(false) : openCreateForm}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
         >
           {showForm ? 'Cancel' : 'New user'}
@@ -129,7 +156,9 @@ export default function UsersPage() {
           noValidate
           className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
         >
-          <h2 className="text-base font-medium text-slate-900">New user</h2>
+          <h2 className="text-base font-medium text-slate-900">
+            {isEditing ? 'Edit user' : 'New user'}
+          </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -162,7 +191,12 @@ export default function UsersPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Temporary password <span className="text-red-500">*</span>
+                {isEditing ? 'New password' : 'Temporary password'}{' '}
+                {isEditing ? (
+                  <span className="text-slate-400">(leave blank to keep it)</span>
+                ) : (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <input
                 id="password"
@@ -270,12 +304,15 @@ export default function UsersPage() {
                 <th scope="col" className="px-4 py-3 font-medium">
                   Venue
                 </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                     Loading users…
                   </td>
                 </tr>
@@ -283,7 +320,7 @@ export default function UsersPage() {
 
               {!loading && users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                     No users registered yet.
                   </td>
                 </tr>
@@ -298,6 +335,17 @@ export default function UsersPage() {
                       {ROLE_OPTIONS.find((option) => option.value === user.role)?.label}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{user.venue_name || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(user)}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
             </tbody>

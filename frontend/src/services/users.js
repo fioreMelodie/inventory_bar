@@ -15,6 +15,12 @@ export const usersService = {
     const { data } = await api.post('/users/', user)
     return data
   },
+
+  /** Actualiza una cuenta existente (HU07). */
+  async update(id, user) {
+    const { data } = await api.patch(`/users/${id}/`, user)
+    return data
+  },
 }
 
 /** Etiquetas de rol mostradas en la interfaz. */
