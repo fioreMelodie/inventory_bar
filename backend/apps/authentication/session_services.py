@@ -24,6 +24,10 @@ CLOSING_EVENTS = {
         EventType.SESSION_DISCONNECTED,
         "Cierre de sesión por pérdida de conexión a internet.",
     ),
+    UserSession.ClosingReason.USER_DEACTIVATED: (
+        EventType.SESSION_REVOKED,
+        "Cierre inmediato de la sesión por inactivación de la cuenta.",
+    ),
 }
 
 
@@ -50,3 +54,16 @@ def close_session(session, reason, request=None):
         request=request,
     )
     return session
+
+
+def close_active_sessions(user, reason, request=None):
+    """
+    Cierra todas las sesiones abiertas de un usuario.
+
+    Se usa al inactivar una cuenta (HU08): si el usuario tiene una sesión
+    activa en ese momento, esta se invalida inmediatamente.
+    """
+    closed = []
+    for session in UserSession.objects.filter(user=user, ended_at__isnull=True):
+        closed.append(close_session(session, reason, request=request))
+    return closed

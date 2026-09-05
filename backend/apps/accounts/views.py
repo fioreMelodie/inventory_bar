@@ -3,14 +3,23 @@ Vistas del Módulo 3 - Administración de Usuarios.
 
 HU06: Crear usuario con rol y sede asignada.
 """
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from apps.audit.models import EventType
 from apps.audit.services import record_event
+from apps.authentication.models import UserSession
+from apps.authentication.session_services import close_active_sessions
 
 from .models import User
 from .permissions import IsAdministrator
-from .serializers import UserCreateSerializer, UserSerializer, UserUpdateSerializer
+from .serializers import (
+    UserCreateSerializer,
+    UserSerializer,
+    UserStatusChangeSerializer,
+    UserUpdateSerializer,
+)
 
 
 class UserViewSet(
@@ -25,7 +34,9 @@ class UserViewSet(
 
     - POST  /api/users/       crea una cuenta (HU06).
     - GET   /api/users/       lista las cuentas registradas.
-    - PATCH /api/users/{id}/  edita una cuenta existente (HU07).
+    - PATCH /api/users/{id}/             edita una cuenta existente (HU07).
+    - POST  /api/users/{id}/deactivate/  inactiva una cuenta (HU08).
+    - POST  /api/users/{id}/activate/    reactiva una cuenta inactiva (HU08).
 
     Toda la gestión de cuentas es exclusiva del Administrador: no existe
     autoregistro en el sistema.
@@ -115,3 +126,81 @@ class UserViewSet(
             ),
             request=self.request,
         )
+
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None):
+        """
+        Inactiva una cuenta de usuario.
+
+        La cuenta deja de poder autenticarse y su sesión activa, si la tiene,
+        se invalida de inmediato. El historial de pedidos, pagos y auditoría
+        del usuario permanece íntegro, y sus pedidos ABIERTOS se mantienen en
+        ese estado para que otro usuario los gestione.
+        """
+        user = self.get_object()
+
+        serializer = UserStatusChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if user.pk == request.user.pk:
+            return Response(
+                {"detail": "You cannot deactivate your own account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.is_active:
+            return Response(
+                {"detail": "This user is already inactive."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.is_active = False
+        user.save(update_fields=["is_active", "updated_at"])
+
+        closed = close_active_sessions(
+            user, UserSession.ClosingReason.USER_DEACTIVATED, request=request
+        )
+
+        record_event(
+            event_type=EventType.USER_DEACTIVATED,
+            username=request.user.username,
+            user=request.user,
+            entity="User",
+            entity_id=user.id,
+            description=(
+                f"Inactivación del usuario '{user.username}'. "
+                f"Sesiones activas invalidadas: {len(closed)}."
+            ),
+            request=request,
+        )
+
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None):
+        """Reactiva una cuenta inactiva. Solo el Administrador puede hacerlo."""
+        user = self.get_object()
+
+        serializer = UserStatusChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if user.is_active:
+            return Response(
+                {"detail": "This user is already active."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.is_active = True
+        user.save(update_fields=["is_active", "updated_at"])
+
+        record_event(
+            event_type=EventType.USER_REACTIVATED,
+            username=request.user.username,
+            user=request.user,
+            entity="User",
+            entity_id=user.id,
+            description=f"Reactivación del usuario '{user.username}'.",
+            request=request,
+        )
+
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
