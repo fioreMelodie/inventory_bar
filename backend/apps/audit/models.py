@@ -19,11 +19,14 @@ class EventType(models.TextChoices):
     SESSION_TIMEOUT = "SESSION_TIMEOUT", "Cierre de sesión por inactividad"
     SESSION_LOGOUT = "SESSION_LOGOUT", "Cierre de sesión manual"
     SESSION_DISCONNECTED = "SESSION_DISCONNECTED", "Cierre de sesión por pérdida de conexión"
+    SESSION_REVOKED = "SESSION_REVOKED", "Sesión revocada por el sistema"
     VENUE_CREATED = "VENUE_CREATED", "Creación de sede"
     VENUE_UPDATED = "VENUE_UPDATED", "Modificación de sede"
     VENUE_DEACTIVATED = "VENUE_DEACTIVATED", "Inactivación de sede"
     USER_CREATED = "USER_CREATED", "Creación de usuario"
     USER_UPDATED = "USER_UPDATED", "Modificación de usuario"
+    USER_DEACTIVATED = "USER_DEACTIVATED", "Inactivación de usuario"
+    USER_REACTIVATED = "USER_REACTIVATED", "Reactivación de usuario"
 
 
 class AuditEventQuerySet(models.QuerySet):

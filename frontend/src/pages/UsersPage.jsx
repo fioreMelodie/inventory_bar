@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { ROLES_REQUIRING_VENUE, ROLE_OPTIONS, usersService } from '../services/users'
 import { getFieldError, venuesService } from '../services/venues'
@@ -15,12 +17,20 @@ const EMPTY_FORM = {
 /**
  * HU06 - Crear usuario con rol y sede asignada.
  * HU07 - Editar usuario.
+ * HU08 - Inactivar usuario.
  * Administración > Users. Acceso exclusivo del Administrador.
  */
 export default function UsersPage() {
+  const { user: currentUser } = useAuth()
+
   const [users, setUsers] = useState([])
   const [venues, setVenues] = useState([])
   const [loading, setLoading] = useState(true)
+  const [includeInactive, setIncludeInactive] = useState(false)
+
+  const [userToDeactivate, setUserToDeactivate] = useState(null)
+  const [statusError, setStatusError] = useState('')
+  const [changingStatus, setChangingStatus] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -33,13 +43,14 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeInactive])
 
   async function loadData() {
     setLoading(true)
     try {
       const [userList, venueList] = await Promise.all([
-        usersService.list(),
+        usersService.list({ includeInactive }),
         venuesService.list(),
       ])
       setUsers(userList)
@@ -119,6 +130,32 @@ export default function UsersPage() {
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeactivate() {
+    setStatusError('')
+    setChangingStatus(true)
+    try {
+      await usersService.deactivate(userToDeactivate.id)
+      setFeedback('User "' + userToDeactivate.username + '" is now inactive.')
+      setUserToDeactivate(null)
+      await loadData()
+    } catch (requestError) {
+      setStatusError(getErrorMessage(requestError, 'Unable to deactivate this user.'))
+    } finally {
+      setChangingStatus(false)
+    }
+  }
+
+  async function handleActivate(user) {
+    setFeedback('')
+    try {
+      await usersService.activate(user.id)
+      setFeedback('User "' + user.username + '" was reactivated.')
+      await loadData()
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError, 'Unable to reactivate this user.'))
     }
   }
 
@@ -287,7 +324,17 @@ export default function UsersPage() {
         </form>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <label className="mt-6 flex items-center gap-2 text-sm text-slate-600">
+        <input
+          type="checkbox"
+          checked={includeInactive}
+          onChange={(event) => setIncludeInactive(event.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+        />
+        Show inactive users
+      </label>
+
+      <section className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -304,6 +351,9 @@ export default function UsersPage() {
                 <th scope="col" className="px-4 py-3 font-medium">
                   Venue
                 </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Status
+                </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   Actions
                 </th>
@@ -312,7 +362,7 @@ export default function UsersPage() {
             <tbody className="divide-y divide-slate-100">
               {loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                     Loading users…
                   </td>
                 </tr>
@@ -320,7 +370,7 @@ export default function UsersPage() {
 
               {!loading && users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                     No users registered yet.
                   </td>
                 </tr>
@@ -336,6 +386,17 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{user.venue_name || '—'}</td>
                     <td className="px-4 py-3">
+                      <span
+                        className={
+                          user.is_active
+                            ? 'rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700'
+                            : 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600'
+                        }
+                      >
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
@@ -344,6 +405,29 @@ export default function UsersPage() {
                         >
                           Edit
                         </button>
+
+                        {user.is_active ? (
+                          user.id !== currentUser.id && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStatusError('')
+                                setUserToDeactivate(user)
+                              }}
+                              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50"
+                            >
+                              Deactivate
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleActivate(user)}
+                            className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
+                          >
+                            Reactivate
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -352,6 +436,20 @@ export default function UsersPage() {
           </table>
         </div>
       </section>
+
+      {userToDeactivate && (
+        <ConfirmDialog
+          title={'Deactivate "' + userToDeactivate.username + '"?'}
+          message="The user will no longer be able to sign in and any active session will be
+            closed immediately. Their activity history is kept, and open orders stay open so
+            another user can handle them. You can reactivate the account later."
+          confirmLabel="Deactivate"
+          error={statusError}
+          busy={changingStatus}
+          onConfirm={handleDeactivate}
+          onCancel={() => setUserToDeactivate(null)}
+        />
+      )}
     </main>
   )
 }

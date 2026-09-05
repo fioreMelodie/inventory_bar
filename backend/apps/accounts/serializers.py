@@ -164,3 +164,18 @@ class UserUpdateSerializer(UserCreateSerializer):
 
         instance.save()
         return instance
+
+
+class UserStatusChangeSerializer(serializers.Serializer):
+    """
+    Confirmación del cambio de estado de una cuenta (HU08).
+
+    La inactivación requiere confirmación explícita del Administrador.
+    """
+
+    confirm = serializers.BooleanField()
+
+    def validate_confirm(self, value):
+        if not value:
+            raise serializers.ValidationError("You must confirm this action.")
+        return value

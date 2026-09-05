@@ -21,6 +21,18 @@ export const usersService = {
     const { data } = await api.patch(`/users/${id}/`, user)
     return data
   },
+
+  /** Inactiva una cuenta. Requiere confirmacion explicita (HU08). */
+  async deactivate(id) {
+    const { data } = await api.post(`/users/${id}/deactivate/`, { confirm: true })
+    return data
+  },
+
+  /** Reactiva una cuenta inactiva (HU08). */
+  async activate(id) {
+    const { data } = await api.post(`/users/${id}/activate/`, { confirm: true })
+    return data
+  },
 }
 
 /** Etiquetas de rol mostradas en la interfaz. */

@@ -45,6 +45,7 @@ class UserSession(models.Model):
         INACTIVITY = "INACTIVITY", "Cierre automático por inactividad"
         MANUAL = "MANUAL", "Cierre manual por el usuario"
         DISCONNECTION = "DISCONNECTION", "Cierre por pérdida de conexión"
+        USER_DEACTIVATED = "USER_DEACTIVATED", "Cierre por inactivación de la cuenta"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
