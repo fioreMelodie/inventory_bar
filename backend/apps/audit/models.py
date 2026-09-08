@@ -27,6 +27,7 @@ class EventType(models.TextChoices):
     USER_UPDATED = "USER_UPDATED", "Modificación de usuario"
     USER_DEACTIVATED = "USER_DEACTIVATED", "Inactivación de usuario"
     USER_REACTIVATED = "USER_REACTIVATED", "Reactivación de usuario"
+    PRODUCT_CREATED = "PRODUCT_CREATED", "Creación de producto"
 
 
 class AuditEventQuerySet(models.QuerySet):

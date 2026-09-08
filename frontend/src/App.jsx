@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import ProductsPage from './pages/ProductsPage'
 import UsersPage from './pages/UsersPage'
 import VenuesPage from './pages/VenuesPage'
 
@@ -38,6 +39,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/catalog"
+          element={
+            <ProtectedRoute>
+              <ProductsPage />
             </ProtectedRoute>
           }
         />
