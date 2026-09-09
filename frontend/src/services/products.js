@@ -31,6 +31,29 @@ export const productsService = {
   },
 }
 
+/** Actualiza un producto del catalogo (HU10). */
+productsService.update = async function update(id, product, image) {
+  if (!image) {
+    const { data } = await api.patch(`/products/${id}/`, product)
+    return data
+  }
+
+  const payload = new FormData()
+  Object.entries(product).forEach(([key, value]) => payload.append(key, value))
+  payload.append('image', image)
+
+  const { data } = await api.patch(`/products/${id}/`, payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+/** Cambia el estado activo de un producto (HU10). */
+productsService.setActive = async function setActive(id, isActive) {
+  const { data } = await api.patch(`/products/${id}/`, { is_active: isActive })
+  return data
+}
+
 /** Formatea un valor en pesos colombianos, sin decimales. */
 export function formatPrice(value) {
   if (value === undefined || value === null) return ''
