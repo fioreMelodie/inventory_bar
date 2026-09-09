@@ -5,6 +5,7 @@ import { formatPrice, productsService } from '../services/products'
 import { getFieldError } from '../services/venues'
 
 const EMPTY_FORM = {
+  id: null,
   name: '',
   product_type: '',
   category: '',
@@ -14,7 +15,8 @@ const EMPTY_FORM = {
 
 /**
  * HU09 - Crear producto en el catálogo.
- * Productos > Catalog. La creación es exclusiva del Administrador.
+ * HU10 - Editar producto del catálogo.
+ * Productos > Catalog. La parametrización es exclusiva del Administrador.
  */
 export default function ProductsPage() {
   const { user } = useAuth()
@@ -22,6 +24,7 @@ export default function ProductsPage() {
 
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [includeInactive, setIncludeInactive] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -30,14 +33,17 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
 
+  const isEditing = form.id !== null
+
   useEffect(() => {
     loadProducts()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeInactive])
 
   async function loadProducts() {
     setLoading(true)
     try {
-      setProducts(await productsService.list())
+      setProducts(await productsService.list({ includeInactive: isAdmin && includeInactive }))
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, 'Unable to load the catalog.'))
     } finally {
@@ -45,12 +51,42 @@ export default function ProductsPage() {
     }
   }
 
-  function openForm() {
+  function openCreateForm() {
     setForm(EMPTY_FORM)
     setImage(null)
     setFormError('')
     setFeedback('')
     setShowForm(true)
+  }
+
+  function openEditForm(product) {
+    setForm({
+      id: product.id,
+      name: product.name,
+      product_type: product.product_type,
+      category: product.category,
+      purchase_price: String(product.purchase_price ?? ''),
+      sale_price: String(product.sale_price),
+    })
+    setImage(null)
+    setFormError('')
+    setFeedback('')
+    setShowForm(true)
+  }
+
+  async function toggleActive(product) {
+    setFeedback('')
+    setFormError('')
+    try {
+      await productsService.setActive(product.id, !product.is_active)
+      setFeedback(
+        'Product "' + product.name + '" is now ' +
+          (product.is_active ? 'inactive' : 'active') + '.',
+      )
+      await loadProducts()
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError, 'Unable to change the product status.'))
+    }
   }
 
   async function handleSubmit(event) {
@@ -69,19 +105,23 @@ export default function ProductsPage() {
       return
     }
 
+    const payload = {
+      name: form.name.trim(),
+      product_type: form.product_type.trim(),
+      category: form.category.trim(),
+      purchase_price: Number(form.purchase_price),
+      sale_price: Number(form.sale_price),
+    }
+
     setSaving(true)
     try {
-      await productsService.create(
-        {
-          name: form.name.trim(),
-          product_type: form.product_type.trim(),
-          category: form.category.trim(),
-          purchase_price: Number(form.purchase_price),
-          sale_price: Number(form.sale_price),
-        },
-        image,
-      )
-      setFeedback('Product "' + form.name.trim() + '" was created successfully.')
+      if (isEditing) {
+        await productsService.update(form.id, payload, image)
+        setFeedback('Product "' + payload.name + '" was updated successfully.')
+      } else {
+        await productsService.create(payload, image)
+        setFeedback('Product "' + payload.name + '" was created successfully.')
+      }
       setShowForm(false)
       setForm(EMPTY_FORM)
       setImage(null)
@@ -112,7 +152,7 @@ export default function ProductsPage() {
         {isAdmin && (
           <button
             type="button"
-            onClick={showForm ? () => setShowForm(false) : openForm}
+            onClick={showForm ? () => setShowForm(false) : openCreateForm}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
           >
             {showForm ? 'Cancel' : 'New product'}
@@ -135,7 +175,9 @@ export default function ProductsPage() {
           noValidate
           className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
         >
-          <h2 className="text-base font-medium text-slate-900">New product</h2>
+          <h2 className="text-base font-medium text-slate-900">
+            {isEditing ? 'Edit product' : 'New product'}
+          </h2>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -214,7 +256,10 @@ export default function ProductsPage() {
 
             <div className="sm:col-span-2">
               <label htmlFor="image" className="block text-sm font-medium text-slate-700">
-                Image <span className="text-slate-400">(optional)</span>
+                Image{' '}
+                <span className="text-slate-400">
+                  {isEditing ? '(leave empty to keep the current one)' : '(optional)'}
+                </span>
               </label>
               <input
                 id="image"
@@ -251,7 +296,19 @@ export default function ProductsPage() {
         </form>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {isAdmin && (
+        <label className="mt-6 flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={includeInactive}
+            onChange={(event) => setIncludeInactive(event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          />
+          Show inactive products
+        </label>
+      )}
+
+      <section className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -273,12 +330,17 @@ export default function ProductsPage() {
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   Sale price
                 </th>
+                {isAdmin && (
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && (
                 <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={isAdmin ? 6 : 4} className="px-4 py-6 text-center text-slate-500">
                     Loading catalog…
                   </td>
                 </tr>
@@ -286,7 +348,7 @@ export default function ProductsPage() {
 
               {!loading && products.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={isAdmin ? 6 : 4} className="px-4 py-6 text-center text-slate-500">
                     No products in the catalog yet.
                   </td>
                 </tr>
@@ -312,6 +374,11 @@ export default function ProductsPage() {
                           </span>
                         )}
                         <span className="font-medium text-slate-900">{product.name}</span>
+                        {product.is_active === false && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                            Inactive
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{product.product_type}</td>
@@ -324,6 +391,30 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-right font-medium text-slate-900">
                       {formatPrice(product.sale_price)}
                     </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(product)}
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleActive(product)}
+                            className={
+                              product.is_active
+                                ? 'rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50'
+                                : 'rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50'
+                            }
+                          >
+                            {product.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>
