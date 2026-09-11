@@ -28,6 +28,10 @@ class ProductViewSet(
     - GET   /api/products/       lista los productos del catálogo.
     - PATCH /api/products/{id}/  edita un producto existente (HU10).
 
+    La consulta (HU11) admite los filtros `type`, `category` y `search`, y está
+    disponible para los tres roles. Para el Cajero y el Mesero el catálogo es
+    de solo lectura y no incluye el valor de compra.
+
     El catálogo es compartido por todas las sedes: los atributos y los precios
     son iguales en todas ellas. Los cambios aplican de inmediato en todas, pero
     solo sobre pedidos futuros: los pedidos ya registrados conservan el precio
@@ -54,9 +58,27 @@ class ProductViewSet(
 
         # Solo se muestran productos activos, salvo que el Administrador pida
         # explícitamente ver también los inactivos.
-        if self.request.query_params.get("include_inactive") == "true":
-            return queryset
-        return queryset.filter(is_active=True)
+        include_inactive = (
+            self.request.query_params.get("include_inactive") == "true"
+            and self.request.user.is_admin
+        )
+        if not include_inactive:
+            queryset = queryset.filter(is_active=True)
+
+        # Filtros de la HU11: tipo, categoría y búsqueda por nombre.
+        product_type = self.request.query_params.get("type")
+        if product_type:
+            queryset = queryset.filter(product_type__iexact=product_type.strip())
+
+        category = self.request.query_params.get("category")
+        if category:
+            queryset = queryset.filter(category__iexact=category.strip())
+
+        search = self.request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(name__icontains=search.strip())
+
+        return queryset
 
     def perform_create(self, serializer):
         product = serializer.save()
