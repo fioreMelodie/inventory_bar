@@ -16,6 +16,7 @@ const EMPTY_FORM = {
 /**
  * HU09 - Crear producto en el catálogo.
  * HU10 - Editar producto del catálogo.
+ * HU11 - Consultar catálogo de productos.
  * Productos > Catalog. La parametrización es exclusiva del Administrador.
  */
 export default function ProductsPage() {
@@ -26,6 +27,12 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [includeInactive, setIncludeInactive] = useState(false)
 
+  // Filtros de la HU11. Se aplican sobre el listado ya cargado para que la
+  // respuesta sea inmediata, sin recargar la página.
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [image, setImage] = useState(null)
@@ -34,6 +41,16 @@ export default function ProductsPage() {
   const [feedback, setFeedback] = useState('')
 
   const isEditing = form.id !== null
+
+  const types = [...new Set(products.map((product) => product.product_type))].sort()
+  const categories = [...new Set(products.map((product) => product.category))].sort()
+
+  const visibleProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(search.trim().toLowerCase())
+    const matchesType = !typeFilter || product.product_type === typeFilter
+    const matchesCategory = !categoryFilter || product.category === categoryFilter
+    return matchesSearch && matchesType && matchesCategory
+  })
 
   useEffect(() => {
     loadProducts()
@@ -296,8 +313,62 @@ export default function ProductsPage() {
         </form>
       )}
 
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div>
+          <label htmlFor="search" className="block text-xs font-medium text-slate-600">
+            Search by name
+          </label>
+          <input
+            id="search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Type to filter…"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="type-filter" className="block text-xs font-medium text-slate-600">
+            Type
+          </label>
+          <select
+            id="type-filter"
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          >
+            <option value="">All types</option>
+            {types.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="category-filter" className="block text-xs font-medium text-slate-600">
+            Category
+          </label>
+          <select
+            id="category-filter"
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {isAdmin && (
-        <label className="mt-6 flex items-center gap-2 text-sm text-slate-600">
+        <label className="mt-4 flex items-center gap-2 text-sm text-slate-600">
           <input
             type="checkbox"
             checked={includeInactive}
@@ -346,16 +417,18 @@ export default function ProductsPage() {
                 </tr>
               )}
 
-              {!loading && products.length === 0 && (
+              {!loading && visibleProducts.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin ? 6 : 4} className="px-4 py-6 text-center text-slate-500">
-                    No products in the catalog yet.
+                    {products.length === 0
+                      ? 'No products in the catalog yet.'
+                      : 'No products match the current filters.'}
                   </td>
                 </tr>
               )}
 
               {!loading &&
-                products.map((product) => (
+                visibleProducts.map((product) => (
                   <tr key={product.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
