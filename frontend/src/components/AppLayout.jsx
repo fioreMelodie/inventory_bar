@@ -10,6 +10,7 @@ const MENU_BY_ROLE = {
     { to: '/admin/venues', label: 'Venues' },
     { to: '/admin/users', label: 'Users' },
     { to: '/catalog', label: 'Catalog' },
+    { to: '/admin/suppliers', label: 'Suppliers' },
   ],
   CASHIER: [
     { to: '/cashier', label: 'Home', end: true },
