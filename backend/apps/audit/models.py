@@ -32,6 +32,7 @@ class EventType(models.TextChoices):
     SUPPLIER_CREATED = "SUPPLIER_CREATED", "Registro de proveedor"
     SUPPLIER_UPDATED = "SUPPLIER_UPDATED", "Modificación de proveedor"
     SUPPLIER_DELETED = "SUPPLIER_DELETED", "Eliminación de proveedor"
+    SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Asociación de productos a proveedor"
 
 
 class AuditEventQuerySet(models.QuerySet):

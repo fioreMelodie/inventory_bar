@@ -24,4 +24,19 @@ export const suppliersService = {
   async remove(id) {
     await api.delete(`/suppliers/${id}/`)
   },
+
+  /** Productos que suministra un proveedor (HU13). */
+  async listProducts(id) {
+    const { data } = await api.get(`/suppliers/${id}/products/`)
+    return data
+  },
+
+  /**
+   * Define la lista completa de productos del proveedor (HU13).
+   * Los productos omitidos quedan desvinculados.
+   */
+  async setProducts(id, productIds) {
+    const { data } = await api.put(`/suppliers/${id}/products/`, { products: productIds })
+    return data
+  },
 }
