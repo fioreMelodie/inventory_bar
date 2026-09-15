@@ -5,6 +5,12 @@ from .models import Product
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    """Ver docstring de Meta."""
+
+    supplier_name = serializers.CharField(
+        source="supplier.name", default=None, read_only=True
+    )
+
     """
     Producto del catálogo.
 
@@ -21,6 +27,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "category",
             "purchase_price",
             "sale_price",
+            "supplier",
+            "supplier_name",
             "image",
             "is_active",
             "created_at",

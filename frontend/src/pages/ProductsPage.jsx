@@ -17,6 +17,7 @@ const EMPTY_FORM = {
  * HU09 - Crear producto en el catálogo.
  * HU10 - Editar producto del catálogo.
  * HU11 - Consultar catálogo de productos.
+ * HU13 - El catálogo muestra el proveedor asociado a cada producto.
  * Productos > Catalog. La parametrización es exclusiva del Administrador.
  */
 export default function ProductsPage() {
@@ -394,6 +395,11 @@ export default function ProductsPage() {
                   Category
                 </th>
                 {isAdmin && (
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Supplier
+                  </th>
+                )}
+                {isAdmin && (
                   <th scope="col" className="px-4 py-3 text-right font-medium">
                     Purchase
                   </th>
@@ -411,7 +417,7 @@ export default function ProductsPage() {
             <tbody className="divide-y divide-slate-100">
               {loading && (
                 <tr>
-                  <td colSpan={isAdmin ? 6 : 4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={isAdmin ? 7 : 4} className="px-4 py-6 text-center text-slate-500">
                     Loading catalog…
                   </td>
                 </tr>
@@ -419,7 +425,7 @@ export default function ProductsPage() {
 
               {!loading && visibleProducts.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 6 : 4} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={isAdmin ? 7 : 4} className="px-4 py-6 text-center text-slate-500">
                     {products.length === 0
                       ? 'No products in the catalog yet.'
                       : 'No products match the current filters.'}
@@ -456,6 +462,11 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">{product.product_type}</td>
                     <td className="px-4 py-3 text-slate-600">{product.category}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-slate-600">
+                        {product.supplier_name || '-'}
+                      </td>
+                    )}
                     {isAdmin && (
                       <td className="px-4 py-3 text-right text-slate-600">
                         {formatPrice(product.purchase_price)}

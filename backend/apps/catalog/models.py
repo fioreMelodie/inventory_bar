@@ -28,6 +28,18 @@ class Product(models.Model):
     purchase_price = models.PositiveIntegerField("valor de compra")
     sale_price = models.PositiveIntegerField("valor de venta")
 
+    # Un producto tiene un único proveedor principal; un proveedor puede
+    # suministrar varios productos. La relación es informativa: no genera
+    # órdenes de compra automáticas (HU13).
+    supplier = models.ForeignKey(
+        "suppliers.Supplier",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name="proveedor",
+    )
+
     image = models.ImageField(
         "imagen", upload_to="products/", blank=True, null=True
     )
