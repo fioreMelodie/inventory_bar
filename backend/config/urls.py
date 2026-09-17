@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/", include("apps.accounts.urls")),
     path("api/", include("apps.catalog.urls")),
     path("api/", include("apps.suppliers.urls")),
+    path("api/", include("apps.inventory.urls")),
 ]
 
 # En desarrollo, Django sirve las imágenes de producto cargadas por el usuario.
