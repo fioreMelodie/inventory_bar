@@ -13,4 +13,15 @@ export const inventoryService = {
     const { data } = await api.post('/inventory/entries/', payload)
     return data
   },
+
+  /**
+   * Stock actual de una sede (HU15).
+   * El Cajero siempre recibe el de su sede, aunque indique otra.
+   */
+  async stock({ venue } = {}) {
+    const { data } = await api.get('/inventory/stock/', {
+      params: venue ? { venue } : undefined,
+    })
+    return data
+  },
 }
