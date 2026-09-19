@@ -7,6 +7,7 @@ import { getFieldError, venuesService } from '../services/venues'
 
 /**
  * HU14 - Registrar entrada de mercancía al inventario.
+ * HU15 - Consultar stock disponible por sede.
  * Inventory. Disponible para Cajero (su sede) y Administrador (todas).
  */
 export default function InventoryPage() {
@@ -24,9 +25,21 @@ export default function InventoryPage() {
   const [feedback, setFeedback] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // HU15 - Consulta de stock de la sede.
+  const [stock, setStock] = useState([])
+  const [stockVenueName, setStockVenueName] = useState('')
+  const [stockSearch, setStockSearch] = useState('')
+  const [loadingStock, setLoadingStock] = useState(true)
+
   useEffect(() => {
     loadData()
   }, [])
+
+  // El Administrador consulta el stock de la sede seleccionada en el filtro.
+  useEffect(() => {
+    loadStock()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venue])
 
   async function loadData() {
     setLoading(true)
@@ -41,6 +54,25 @@ export default function InventoryPage() {
       setError(getErrorMessage(requestError, 'Unable to load the catalog.'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const visibleStock = stock.filter((item) =>
+    item.product_name.toLowerCase().includes(stockSearch.trim().toLowerCase()),
+  )
+
+  async function loadStock() {
+    setLoadingStock(true)
+    try {
+      const data = await inventoryService.stock({ venue: isAdmin && venue ? venue : undefined })
+      setStock(data.results)
+      setStockVenueName(data.venue_name)
+    } catch (requestError) {
+      // Sin sedes registradas todavía no hay stock que mostrar.
+      setStock([])
+      setStockVenueName('')
+    } finally {
+      setLoadingStock(false)
     }
   }
 
@@ -79,6 +111,7 @@ export default function InventoryPage() {
       )
       setProduct('')
       setQuantity('')
+      await loadStock()
     } catch (requestError) {
       setError(
         getFieldError(requestError, 'quantity') ||
@@ -92,7 +125,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-8">
       <header>
         <h1 className="text-xl font-semibold text-slate-900">Inventory</h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -195,6 +228,96 @@ export default function InventoryPage() {
           </button>
         </div>
       </form>
+
+      <section className="mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-medium text-slate-900">
+              Current stock{stockVenueName ? ' - ' + stockVenueName : ''}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isAdmin
+                ? 'Pick a venue above to switch the inventory you are looking at.'
+                : 'Stock available in your venue.'}
+            </p>
+          </div>
+
+          <div className="w-full sm:w-64">
+            <label htmlFor="stock-search" className="block text-xs font-medium text-slate-600">
+              Search by product
+            </label>
+            <input
+              id="stock-search"
+              type="search"
+              value={stockSearch}
+              onChange={(event) => setStockSearch(event.target.value)}
+              placeholder="Type to filter…"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Product
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Category
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                    Units in stock
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loadingStock && (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                      Loading stock…
+                    </td>
+                  </tr>
+                )}
+
+                {!loadingStock && visibleStock.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                      {stock.length === 0
+                        ? 'No products to show yet.'
+                        : 'No products match the current filter.'}
+                    </td>
+                  </tr>
+                )}
+
+                {!loadingStock &&
+                  visibleStock.map((item) => (
+                    <tr
+                      key={item.product}
+                      className={item.is_out_of_stock ? 'bg-amber-50' : undefined}
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {item.product_name}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{item.category}</td>
+                      <td className="px-4 py-3 text-right">
+                        {item.is_out_of_stock ? (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                            Out of stock
+                          </span>
+                        ) : (
+                          <span className="font-medium text-slate-900">{item.quantity}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

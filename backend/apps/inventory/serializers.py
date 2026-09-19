@@ -101,3 +101,24 @@ class StockSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = fields
+
+
+class VenueStockSerializer(serializers.Serializer):
+    """
+    Stock de un producto en la sede consultada (HU15).
+
+    Se construye a partir del catálogo activo, de modo que los productos que
+    nunca han tenido entrada aparecen con stock cero en lugar de desaparecer
+    del listado.
+    """
+
+    product = serializers.IntegerField(source="id", read_only=True)
+    product_name = serializers.CharField(source="name", read_only=True)
+    product_type = serializers.CharField(read_only=True)
+    category = serializers.CharField(read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    is_out_of_stock = serializers.SerializerMethodField()
+
+    def get_is_out_of_stock(self, obj):
+        """Permite resaltar en la interfaz los productos agotados."""
+        return obj.quantity == 0
