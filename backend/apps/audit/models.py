@@ -27,6 +27,13 @@ class EventType(models.TextChoices):
     USER_UPDATED = "USER_UPDATED", "Modificación de usuario"
     USER_DEACTIVATED = "USER_DEACTIVATED", "Inactivación de usuario"
     USER_REACTIVATED = "USER_REACTIVATED", "Reactivación de usuario"
+    PRODUCT_CREATED = "PRODUCT_CREATED", "Creación de producto"
+    PRODUCT_UPDATED = "PRODUCT_UPDATED", "Modificación de producto"
+    SUPPLIER_CREATED = "SUPPLIER_CREATED", "Registro de proveedor"
+    SUPPLIER_UPDATED = "SUPPLIER_UPDATED", "Modificación de proveedor"
+    SUPPLIER_DELETED = "SUPPLIER_DELETED", "Eliminación de proveedor"
+    SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Asociación de productos a proveedor"
+    STOCK_ENTRY = "STOCK_ENTRY", "Entrada de mercancía al inventario"
 
 
 class AuditEventQuerySet(models.QuerySet):

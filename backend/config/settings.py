@@ -54,6 +54,9 @@ LOCAL_APPS = [
     "apps.locations",
     "apps.accounts",
     "apps.authentication",
+    "apps.catalog",
+    "apps.suppliers",
+    "apps.inventory",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -144,6 +147,11 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+# Imágenes de producto y demás archivos cargados por los usuarios.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --------------------------------------------------------------------------

@@ -3,6 +3,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import InventoryPage from './pages/InventoryPage'
+import ProductsPage from './pages/ProductsPage'
+import SuppliersPage from './pages/SuppliersPage'
 import UsersPage from './pages/UsersPage'
 import VenuesPage from './pages/VenuesPage'
 
@@ -38,6 +41,33 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/suppliers"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <SuppliersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
+              <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/catalog"
+          element={
+            <ProtectedRoute>
+              <ProductsPage />
             </ProtectedRoute>
           }
         />
