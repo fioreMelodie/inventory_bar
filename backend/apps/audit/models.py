@@ -34,6 +34,9 @@ class EventType(models.TextChoices):
     SUPPLIER_DELETED = "SUPPLIER_DELETED", "Eliminación de proveedor"
     SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Asociación de productos a proveedor"
     STOCK_ENTRY = "STOCK_ENTRY", "Entrada de mercancía al inventario"
+    TABLE_CREATED = "TABLE_CREATED", "Creación de mesa"
+    TABLE_UPDATED = "TABLE_UPDATED", "Modificación de mesa"
+    TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
 
 
 class AuditEventQuerySet(models.QuerySet):

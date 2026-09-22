@@ -12,11 +12,13 @@ const MENU_BY_ROLE = {
     { to: '/catalog', label: 'Catalog' },
     { to: '/admin/suppliers', label: 'Suppliers' },
     { to: '/inventory', label: 'Inventory' },
+    { to: '/admin/tables', label: 'Tables' },
   ],
   CASHIER: [
     { to: '/cashier', label: 'Home', end: true },
     { to: '/catalog', label: 'Catalog' },
     { to: '/inventory', label: 'Inventory' },
+    { to: '/admin/tables', label: 'Tables' },
   ],
   WAITER: [
     { to: '/waiter', label: 'Home', end: true },
