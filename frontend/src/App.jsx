@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import InventoryPage from './pages/InventoryPage'
 import ProductsPage from './pages/ProductsPage'
 import SuppliersPage from './pages/SuppliersPage'
+import TablesPage from './pages/TablesPage'
 import UsersPage from './pages/UsersPage'
 import VenuesPage from './pages/VenuesPage'
 
@@ -50,6 +51,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN']}>
               <SuppliersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/tables"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <TablesPage />
             </ProtectedRoute>
           }
         />
