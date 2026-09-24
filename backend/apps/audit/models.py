@@ -37,6 +37,7 @@ class EventType(models.TextChoices):
     TABLE_CREATED = "TABLE_CREATED", "Creación de mesa"
     TABLE_UPDATED = "TABLE_UPDATED", "Modificación de mesa"
     TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
+    ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
 
 
 class AuditEventQuerySet(models.QuerySet):
