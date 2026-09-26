@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
@@ -7,11 +7,25 @@ import { tablesService } from '../services/tables'
 import { venuesService } from '../services/venues'
 
 /**
- * HU19 - Crear pedido (Mesero).
+ * HU18 - Consultar vista de sala (estado de mesas).
+ * HU19 - El Mesero abre un pedido desde una mesa libre.
  *
- * Vista de sala desde la que el Mesero abre un pedido seleccionando una mesa
- * libre. La vista completa en tiempo real se desarrolla en la HU18.
+ * La vista se refresca sola, de modo que los cambios de estado aparecen sin
+ * recargar la página.
  */
+const REFRESH_INTERVAL_MS = 10000
+
+/** Expresa en texto el tiempo que lleva ocupada una mesa. */
+function formatElapsed(minutes) {
+  if (minutes === null || minutes === undefined) return ''
+  if (minutes < 1) return 'just opened'
+  if (minutes < 60) return minutes + ' min'
+
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest === 0 ? hours + ' h' : hours + ' h ' + rest + ' min'
+}
+
 export default function RoomPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -20,19 +34,28 @@ export default function RoomPage() {
 
   const [venues, setVenues] = useState([])
   const [venue, setVenue] = useState('')
+  const [venueName, setVenueName] = useState('')
   const [tables, setTables] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [opening, setOpening] = useState(null)
 
+  // Se guarda en una referencia para que el temporizador siempre consulte la
+  // sede seleccionada en ese momento.
+  const venueRef = useRef(venue)
+  venueRef.current = venue
+
   useEffect(() => {
     if (isAdmin) loadVenues()
-    loadTables()
+    loadRoom()
+
+    const intervalId = setInterval(loadRoom, REFRESH_INTERVAL_MS)
+    return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    if (isAdmin && venue) loadTables()
+    if (isAdmin && venue) loadRoom()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venue])
 
@@ -46,10 +69,14 @@ export default function RoomPage() {
     }
   }
 
-  async function loadTables() {
-    setLoading(true)
+  async function loadRoom() {
     try {
-      setTables(await tablesService.list({ venue: isAdmin && venue ? venue : undefined }))
+      const data = await tablesService.room({
+        venue: isAdmin && venueRef.current ? venueRef.current : undefined,
+      })
+      setTables(data.results)
+      setVenueName(data.venue_name)
+      setError('')
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'Unable to load the room.'))
     } finally {
@@ -68,7 +95,7 @@ export default function RoomPage() {
         requestError?.response?.data?.table?.[0] ||
           getErrorMessage(requestError, 'Unable to open the order.'),
       )
-      await loadTables()
+      await loadRoom()
     } finally {
       setOpening(null)
     }
@@ -78,11 +105,13 @@ export default function RoomPage() {
     <main className="mx-auto max-w-5xl px-4 py-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Room</h1>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Room{venueName ? ' - ' + venueName : ''}
+          </h1>
           <p className="mt-1 text-sm text-slate-500">
             {canTakeOrders
-              ? 'Pick a free table to open a new order.'
-              : 'Current status of the tables in your venue.'}
+              ? 'Pick a free table to open a new order. The view refreshes on its own.'
+              : 'Current status of the tables. The view refreshes on its own.'}
           </p>
         </div>
 
@@ -143,6 +172,12 @@ export default function RoomPage() {
                   {isFree ? 'Free' : 'Occupied'}
                 </p>
 
+                {!isFree && (
+                  <p className="mt-1 text-xs text-slate-600">
+                    Open for {formatElapsed(table.occupied_minutes)}
+                  </p>
+                )}
+
                 {canTakeOrders && isFree && (
                   <button
                     type="button"
@@ -151,6 +186,16 @@ export default function RoomPage() {
                     className="mt-3 w-full rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:bg-slate-300"
                   >
                     {opening === table.id ? 'Opening…' : 'Open order'}
+                  </button>
+                )}
+
+                {!isFree && table.active_order && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/orders/' + table.active_order)}
+                    className="mt-3 w-full rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-amber-100"
+                  >
+                    View order
                   </button>
                 )}
               </li>

@@ -12,6 +12,17 @@ export const tablesService = {
     return data.results ?? data
   },
 
+  /**
+   * Vista de sala (HU18): mesas activas de la sede con su estado, el pedido
+   * activo y el tiempo que llevan ocupadas.
+   */
+  async room({ venue } = {}) {
+    const { data } = await api.get('/tables/room/', {
+      params: venue ? { venue } : undefined,
+    })
+    return data
+  },
+
   /** Crea una mesa en una sede (HU17). */
   async create({ venue, identifier }) {
     const { data } = await api.post('/tables/', { venue, identifier })
