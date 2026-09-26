@@ -1,4 +1,5 @@
 """Serializadores del Módulo 7 - Gestión de Mesas."""
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.locations.models import Venue
@@ -80,3 +81,55 @@ class TableSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+
+class RoomTableSerializer(serializers.ModelSerializer):
+    """
+    Mesa tal como se presenta en la vista de sala (HU18).
+
+    Añade el pedido activo y el tiempo transcurrido desde su apertura, para
+    que el personal identifique de un vistazo qué mesas llevan más tiempo
+    ocupadas.
+    """
+
+    active_order = serializers.SerializerMethodField()
+    occupied_since = serializers.SerializerMethodField()
+    occupied_minutes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Table
+        fields = (
+            "id",
+            "identifier",
+            "status",
+            "venue",
+            "active_order",
+            "occupied_since",
+            "occupied_minutes",
+        )
+        read_only_fields = fields
+
+    def get_active_order(self, table):
+        order = self._active_order(table)
+        return order.id if order else None
+
+    def get_occupied_since(self, table):
+        order = self._active_order(table)
+        return order.opened_at if order else None
+
+    def get_occupied_minutes(self, table):
+        """Minutos completos transcurridos desde la apertura del pedido."""
+        order = self._active_order(table)
+        if order is None:
+            return None
+
+        elapsed = timezone.now() - order.opened_at
+        return int(elapsed.total_seconds() // 60)
+
+    def _active_order(self, table):
+        # El queryset de la vista precarga los pedidos abiertos, de modo que
+        # no se consulta la base de datos una vez por mesa.
+        orders = getattr(table, "open_orders", None)
+        if orders is None:
+            return None
+        return orders[0] if orders else None

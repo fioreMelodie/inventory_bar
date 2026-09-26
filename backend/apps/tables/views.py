@@ -2,7 +2,9 @@
 Vistas del Módulo 7 - Gestión de Mesas.
 
 HU17: Crear y configurar mesas por sede.
+HU18: Consultar vista de sala (estado de mesas).
 """
+from django.db.models import Prefetch
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,9 +13,11 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import IsAdministrator
 from apps.audit.models import EventType
 from apps.audit.services import record_event
+from apps.locations.models import Venue
+from apps.orders.models import Order, OrderStatus
 
 from .models import Table, TableStatus
-from .serializers import TableSerializer
+from .serializers import RoomTableSerializer, TableSerializer
 
 
 class TableViewSet(
@@ -41,7 +45,7 @@ class TableViewSet(
     def get_permissions(self):
         # Consultar las mesas lo necesitan los tres roles (vista de sala);
         # crearlas y configurarlas es exclusivo del Administrador.
-        if self.action in ("list", "retrieve"):
+        if self.action in ("list", "retrieve", "room"):
             return super().get_permissions()
         return [IsAdministrator()]
 
@@ -138,3 +142,65 @@ class TableViewSet(
         )
 
         return Response(self.get_serializer(table).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"])
+    def room(self, request):
+        """
+        GET /api/tables/room/
+
+        Vista de sala: estado actual de todas las mesas activas de la sede,
+        con el pedido activo y el tiempo que lleva ocupada cada mesa.
+
+        El Mesero y el Cajero solo ven las mesas de su sede asignada; el
+        Administrador puede consultar cualquiera mediante el parámetro `venue`.
+        """
+        venue = self.resolve_room_venue(request)
+        if isinstance(venue, Response):
+            return venue
+
+        tables = (
+            Table.objects.filter(venue=venue, is_active=True)
+            .prefetch_related(
+                Prefetch(
+                    "orders",
+                    queryset=Order.objects.filter(status=OrderStatus.OPEN),
+                    to_attr="open_orders",
+                )
+            )
+            .order_by("identifier")
+        )
+
+        return Response(
+            {
+                "venue": venue.id,
+                "venue_name": venue.name,
+                "results": RoomTableSerializer(tables, many=True).data,
+            }
+        )
+
+    def resolve_room_venue(self, request):
+        """Determina la sede de la vista de sala aplicando el alcance del rol."""
+        if request.user.role == Role.ADMIN:
+            requested = request.query_params.get("venue")
+            if requested:
+                venue = Venue.objects.filter(id=requested).first()
+                if venue is None:
+                    return Response(
+                        {"detail": "Venue not found."}, status=status.HTTP_404_NOT_FOUND
+                    )
+                return venue
+
+            venue = request.user.venue or Venue.objects.filter(is_active=True).first()
+            if venue is None:
+                return Response(
+                    {"detail": "There are no venues registered yet."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return venue
+
+        if request.user.venue is None:
+            return Response(
+                {"detail": "Your account has no venue assigned."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return request.user.venue
