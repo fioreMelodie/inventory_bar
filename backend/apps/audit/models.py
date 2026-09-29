@@ -38,6 +38,9 @@ class EventType(models.TextChoices):
     TABLE_UPDATED = "TABLE_UPDATED", "Modificación de mesa"
     TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
     ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
+    ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
+    STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
+    STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
 
 
 class AuditEventQuerySet(models.QuerySet):

@@ -2,15 +2,18 @@
 Vistas del Módulo 8 - Gestión de Pedidos.
 
 HU19: Crear pedido (Mesero).
+HU16: Descuento automático de stock y reintegro al cancelar.
 """
 from django.db import transaction
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.audit.models import EventType
 from apps.audit.services import record_event
+from apps.inventory.services import restore_for_order
 from apps.tables.models import TableStatus
 
 from .models import Order, OrderStatus
@@ -109,3 +112,48 @@ class OrderViewSet(
         )
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """
+        POST /api/orders/{id}/cancel/
+
+        Cancela un pedido ABIERTO, reintegra al inventario las unidades que
+        había descontado y libera la mesa.
+
+        El pedido no se elimina: queda registrado en estado CANCELADO, porque
+        el histórico de pedidos es permanente. Un pedido ya enviado a caja no
+        puede cancelarse.
+        """
+        order = self.get_object()
+
+        if not order.is_open:
+            return Response(
+                {"detail": "Only open orders can be cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            restore_for_order(order=order, performed_by=request.user, request=request)
+
+            order.status = OrderStatus.CANCELLED
+            order.save(update_fields=["status"])
+
+            table = order.table
+            table.status = TableStatus.FREE
+            table.save(update_fields=["status", "updated_at"])
+
+        record_event(
+            event_type=EventType.ORDER_CANCELLED,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Cancelación del pedido {order.id} de la mesa "
+                f"'{table.identifier}'. El stock descontado fue reintegrado."
+            ),
+            request=request,
+        )
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
