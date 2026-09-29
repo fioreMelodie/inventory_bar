@@ -15,6 +15,7 @@ class OrderStatus(models.TextChoices):
 
     OPEN = "OPEN", "Abierto"
     IN_CASHIER = "IN_CASHIER", "En caja"
+    CANCELLED = "CANCELLED", "Cancelado"
 
 
 class Order(models.Model):
@@ -77,3 +78,49 @@ class Order(models.Model):
         self.total = sum(item.subtotal for item in self.items.all())
         self.save(update_fields=["total"])
         return self.total
+
+
+class OrderItem(models.Model):
+    """
+    Producto solicitado dentro de un pedido.
+
+    El precio unitario se copia del catálogo en el momento de agregar el ítem:
+    un cambio posterior de precio no altera los pedidos ya registrados
+    (criterio de la HU10).
+    """
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="pedido",
+    )
+    product = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        verbose_name="producto",
+    )
+    quantity = models.PositiveIntegerField("cantidad")
+    unit_price = models.PositiveIntegerField("precio unitario")
+    created_at = models.DateTimeField("fecha y hora", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "ítem de pedido"
+        verbose_name_plural = "ítems de pedido"
+        ordering = ["created_at"]
+        constraints = [
+            # Un producto aparece una sola vez por pedido: las cantidades se
+            # acumulan sobre el mismo ítem (criterio de la HU20).
+            models.UniqueConstraint(
+                fields=["order", "product"], name="unique_product_per_order"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} (pedido {self.order_id})"
+
+    @property
+    def subtotal(self):
+        """Importe de la línea: cantidad por precio unitario."""
+        return self.quantity * self.unit_price
