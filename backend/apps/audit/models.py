@@ -39,6 +39,7 @@ class EventType(models.TextChoices):
     TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
     ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
     ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
+    ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Producto agregado a un pedido"
     STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
     STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
 

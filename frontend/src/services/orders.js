@@ -24,4 +24,22 @@ export const ordersService = {
     const { data } = await api.post('/orders/', { table: tableId })
     return data
   },
+
+  /**
+   * Agrega un producto al pedido y descuenta el stock (HU20).
+   * Devuelve el pedido completo con el total ya recalculado.
+   */
+  async addItem(orderId, productId, quantity) {
+    const { data } = await api.post(`/orders/${orderId}/items/`, {
+      product: productId,
+      quantity,
+    })
+    return data
+  },
+
+  /** Cancela un pedido abierto y reintegra el stock (HU16). */
+  async cancel(orderId) {
+    const { data } = await api.post(`/orders/${orderId}/cancel/`, {})
+    return data
+  },
 }

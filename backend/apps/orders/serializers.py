@@ -2,13 +2,28 @@
 from rest_framework import serializers
 
 from apps.accounts.models import Role
+from apps.catalog.models import Product
 from apps.tables.models import Table, TableStatus
 
-from .models import Order
+from .models import Order, OrderItem
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """Línea de un pedido, con su subtotal calculado."""
+
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    subtotal = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ("id", "product", "product_name", "quantity", "unit_price", "subtotal")
+        read_only_fields = fields
 
 
 class OrderSerializer(serializers.ModelSerializer):
     """Pedido con los datos que la interfaz necesita mostrar."""
+
+    items = OrderItemSerializer(many=True, read_only=True)
 
     table_identifier = serializers.CharField(source="table.identifier", read_only=True)
     venue_name = serializers.CharField(source="venue.name", read_only=True)
@@ -28,6 +43,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "status",
             "status_label",
             "total",
+            "items",
             "opened_at",
             "sent_to_cashier_at",
         )
@@ -65,3 +81,28 @@ class OrderCreateSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class AddOrderItemSerializer(serializers.Serializer):
+    """
+    Producto y cantidad que se agregan a un pedido abierto (HU20).
+
+    Solo se ofrecen productos activos del catálogo: un producto inactivo no
+    aparece en el módulo de pedidos.
+    """
+
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.filter(is_active=True),
+        error_messages={
+            "required": "Select a product to add.",
+            "does_not_exist": "This product is not available.",
+        },
+    )
+    quantity = serializers.IntegerField(
+        min_value=1,
+        error_messages={
+            "invalid": "Quantity must be a whole number of units.",
+            "min_value": "Quantity must be greater than zero.",
+            "required": "Quantity is required.",
+        },
+    )
