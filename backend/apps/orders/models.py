@@ -74,8 +74,16 @@ class Order(models.Model):
         return self.status == OrderStatus.OPEN
 
     def recalculate_total(self):
-        """Recalcula el total a partir de los ítems registrados."""
-        self.total = sum(item.subtotal for item in self.items.all())
+        """
+        Recalcula el total a partir de los ítems registrados.
+
+        La suma se hace en la base de datos y no sobre `self.items.all()`:
+        cuando la instancia llega de un queryset con prefetch_related, esa
+        relación está cacheada y devolvería los ítems anteriores al cambio.
+        """
+        self.total = self.items.aggregate(
+            total=models.Sum(models.F("quantity") * models.F("unit_price"))
+        )["total"] or 0
         self.save(update_fields=["total"])
         return self.total
 
