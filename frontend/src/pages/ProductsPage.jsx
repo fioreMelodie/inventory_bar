@@ -58,10 +58,12 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive])
 
-  async function loadProducts() {
+  async function loadProducts(showInactive = includeInactive) {
     setLoading(true)
     try {
-      setProducts(await productsService.list({ includeInactive: isAdmin && includeInactive }))
+      setProducts(
+        await productsService.list({ includeInactive: isAdmin && showInactive }),
+      )
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, 'Unable to load the catalog.'))
     } finally {
@@ -97,11 +99,16 @@ export default function ProductsPage() {
     setFormError('')
     try {
       await productsService.setActive(product.id, !product.is_active)
+      const deactivated = product.is_active
       setFeedback(
         'Product "' + product.name + '" is now ' +
-          (product.is_active ? 'inactive' : 'active') + '.',
+          (deactivated ? 'inactive. It stays in the catalog and can be reactivated' : 'active') +
+          '.',
       )
-      await loadProducts()
+      // Al inactivar, se muestran los inactivos para que el producto no
+      // desaparezca de la tabla sin explicación.
+      if (deactivated) setIncludeInactive(true)
+      await loadProducts(deactivated ? true : includeInactive)
     } catch (requestError) {
       setFormError(getErrorMessage(requestError, 'Unable to change the product status.'))
     }

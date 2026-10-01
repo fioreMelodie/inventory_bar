@@ -1,5 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import api, { REFRESH_KEY, TOKEN_KEY, USER_KEY } from '../services/api'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import api, {
+  REFRESH_KEY,
+  TOKEN_KEY,
+  USER_KEY,
+  setSessionExpiredHandler,
+} from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -30,6 +35,7 @@ function readStoredUser() {
 export const SESSION_NOTICES = {
   INACTIVITY: 'Your session was closed after 3 minutes of inactivity. Please sign in again.',
   DISCONNECTION: 'Your session was closed because the connection was lost. Your data is safe.',
+  EXPIRED: 'Your session is no longer valid. Please sign in again.',
 }
 
 export function AuthProvider({ children }) {
@@ -52,6 +58,16 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(USER_KEY)
     setUser(null)
   }, [])
+
+  // Cuando la API no logra renovar el token, la sesión deja de ser
+  // recuperable: se limpia el estado local y se vuelve al formulario de
+  // inicio de sesión con el motivo correspondiente.
+  useEffect(() => {
+    setSessionExpiredHandler((detail) => {
+      clearSession()
+      setSessionNotice(detail || SESSION_NOTICES.EXPIRED)
+    })
+  }, [clearSession])
 
   /**
    * HU02 - El temporizador de inactividad venció: se notifica al servidor para

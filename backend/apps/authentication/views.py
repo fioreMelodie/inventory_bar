@@ -2,20 +2,29 @@
 Vistas del Módulo 1 - Autenticación y Sesión.
 
 HU01: Inicio de sesión con credenciales.
+HU02: Cierre por inactividad y renovación del access token mientras hay
+actividad real del usuario.
 """
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.audit.models import EventType
 from apps.audit.services import get_client_ip, record_event
 
-from .authentication import close_session_by_inactivity
+from .authentication import (
+    INACTIVITY_TIMEOUT,
+    SESSION_CLOSED_MESSAGE,
+    SESSION_EXPIRED_MESSAGE,
+    close_session_by_inactivity,
+)
 from .models import UserSession
 from .serializers import (
     AuthenticatedUserSerializer,
@@ -239,3 +248,77 @@ class LogoutView(APIView):
             pass
 
         return Response({"detail": "Signed out successfully."}, status=status.HTTP_200_OK)
+
+
+class SessionTokenRefreshView(APIView):
+    """
+    POST /api/auth/refresh/
+
+    Renueva el access token mientras la sesión siga siendo válida.
+
+    El access token dura lo mismo que el tiempo de inactividad permitido (3
+    minutos). Sin este endpoint, un usuario que estuviera trabajando de forma
+    continua perdía el acceso igualmente al vencer el token, lo que contradice
+    el criterio de la HU02 de que cualquier interacción reinicia el contador.
+
+    La renovación no debilita esa regla: se concede únicamente si la sesión
+    sigue abierta y la última actividad está dentro de los 3 minutos, de modo
+    que una sesión realmente inactiva no puede renovarse.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = SessionTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+        except TokenError:
+            return Response(
+                {"detail": SESSION_CLOSED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        session = UserSession.objects.filter(id=token.get("session_id")).first()
+        if session is None or not session.is_active:
+            return Response(
+                {"detail": SESSION_CLOSED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if timezone.now() - session.last_activity_at > INACTIVITY_TIMEOUT:
+            close_session_by_inactivity(session, request=request)
+            return Response(
+                {"detail": SESSION_EXPIRED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Una cuenta inactivada mientras la sesión estaba abierta no puede
+        # seguir renovando su acceso (HU08).
+        if not session.user.is_active:
+            close_session(
+                session, UserSession.ClosingReason.USER_DEACTIVATED, request=request
+            )
+            return Response(
+                {"detail": SESSION_CLOSED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # La renovación cuenta como actividad: la pide el frontend porque el
+        # usuario está operando el sistema.
+        session.last_activity_at = timezone.now()
+        session.save(update_fields=["last_activity_at"])
+
+        data = {"access": str(token.access_token)}
+
+        if jwt_settings.ROTATE_REFRESH_TOKENS:
+            if jwt_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    token.blacklist()
+                except AttributeError:  # pragma: no cover - blacklist habilitado
+                    pass
+
+            token.set_jti()
+            token.set_exp()
+            token.set_iat()
+            data["refresh"] = str(token)
+
+        return Response(data, status=status.HTTP_200_OK)

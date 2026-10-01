@@ -46,11 +46,15 @@ export default function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive])
 
-  async function loadData() {
+  /**
+   * `showInactive` permite forzar el valor sin esperar a que React aplique el
+   * cambio de estado, necesario justo después de inactivar una cuenta.
+   */
+  async function loadData(showInactive = includeInactive) {
     setLoading(true)
     try {
       const [userList, venueList] = await Promise.all([
-        usersService.list({ includeInactive }),
+        usersService.list({ includeInactive: showInactive }),
         venuesService.list(),
       ])
       setUsers(userList)
@@ -138,9 +142,15 @@ export default function UsersPage() {
     setChangingStatus(true)
     try {
       await usersService.deactivate(userToDeactivate.id)
-      setFeedback('User "' + userToDeactivate.username + '" is now inactive.')
+      setFeedback(
+        'User "' + userToDeactivate.username +
+          '" is now inactive. The account is kept and can be reactivated.',
+      )
       setUserToDeactivate(null)
-      await loadData()
+      // La cuenta sigue existiendo: se muestran los inactivos para que la fila
+      // no desaparezca y se vea su nuevo estado.
+      setIncludeInactive(true)
+      await loadData(true)
     } catch (requestError) {
       setStatusError(getErrorMessage(requestError, 'Unable to deactivate this user.'))
     } finally {
