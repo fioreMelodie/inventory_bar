@@ -22,6 +22,75 @@ api.interceptors.request.use((config) => {
 })
 
 /**
+ * Aviso de que la sesión dejó de ser válida.
+ * AuthContext lo registra para limpiar el estado y volver al login.
+ */
+let onSessionExpired = () => {}
+
+export function setSessionExpiredHandler(handler) {
+  onSessionExpired = handler
+}
+
+/** Rutas que no deben intentar renovarse: son las que gestionan la sesión. */
+const SESSION_ENDPOINTS = ['/auth/login/', '/auth/refresh/', '/auth/logout/', '/auth/session/']
+
+function isSessionEndpoint(url = '') {
+  return SESSION_ENDPOINTS.some((endpoint) => url.includes(endpoint))
+}
+
+// Si varias peticiones fallan a la vez, todas esperan la misma renovación en
+// lugar de pedir una cada una, lo que invalidaría los refresh tokens entre sí.
+let refreshInFlight = null
+
+async function refreshAccessToken() {
+  const refresh = localStorage.getItem(REFRESH_KEY)
+  if (!refresh) throw new Error('No refresh token available')
+
+  // Instancia aparte para que esta petición no pase por el interceptor y
+  // provoque una recursión infinita.
+  const { data } = await axios.post('/api/auth/refresh/', { refresh })
+
+  localStorage.setItem(TOKEN_KEY, data.access)
+  if (data.refresh) localStorage.setItem(REFRESH_KEY, data.refresh)
+
+  return data.access
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config
+
+    const shouldRetry =
+      error.response?.status === 401 &&
+      original &&
+      !original._retried &&
+      !isSessionEndpoint(original.url)
+
+    if (!shouldRetry) {
+      return Promise.reject(error)
+    }
+
+    original._retried = true
+
+    try {
+      refreshInFlight = refreshInFlight ?? refreshAccessToken()
+      const token = await refreshInFlight
+
+      original.headers.Authorization = `Bearer ${token}`
+      return api(original)
+    } catch (refreshError) {
+      // La sesión ya no es recuperable: se cerró, venció por inactividad o la
+      // cuenta fue inactivada.
+      onSessionExpired(refreshError?.response?.data?.detail)
+      return Promise.reject(error)
+    } finally {
+      refreshInFlight = null
+    }
+  },
+)
+
+/**
  * Extrae el mensaje de error de una respuesta de la API.
  * Los mensajes llegan desde el backend ya redactados en inglés.
  */
