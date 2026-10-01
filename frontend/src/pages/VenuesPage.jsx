@@ -33,11 +33,11 @@ export default function VenuesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive])
 
-  async function loadVenues() {
+  async function loadVenues(showInactive = includeInactive) {
     setLoading(true)
     setListError('')
     try {
-      setVenues(await venuesService.list({ includeInactive }))
+      setVenues(await venuesService.list({ includeInactive: showInactive }))
     } catch (requestError) {
       setListError(getErrorMessage(requestError, 'Unable to load venues.'))
     } finally {
@@ -102,9 +102,14 @@ export default function VenuesPage() {
     setDeactivating(true)
     try {
       await venuesService.deactivate(venueToDeactivate.id)
-      setFeedback('Venue "' + venueToDeactivate.name + '" is now inactive.')
+      setFeedback(
+        'Venue "' + venueToDeactivate.name +
+          '" is now inactive. Its history is kept and it can be reactivated.',
+      )
       setVenueToDeactivate(null)
-      await loadVenues()
+      // La sede no se elimina: se muestran las inactivas para que siga visible.
+      setIncludeInactive(true)
+      await loadVenues(true)
     } catch (requestError) {
       setDeactivationError(
         getErrorMessage(requestError, 'Unable to deactivate this venue.'),
