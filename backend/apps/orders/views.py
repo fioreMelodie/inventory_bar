@@ -4,8 +4,10 @@ Vistas del Módulo 8 - Gestión de Pedidos.
 HU19: Crear pedido (Mesero).
 HU16: Descuento automático de stock y reintegro al cancelar.
 HU20: Agregar productos a un pedido.
+HU21: Enviar pedido a caja.
 """
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
@@ -235,3 +237,54 @@ class OrderViewSet(
 
         order.refresh_from_db()
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="send-to-cashier")
+    def send_to_cashier(self, request, pk=None):
+        """
+        POST /api/orders/{id}/send-to-cashier/
+
+        Formaliza el pedido y lo traslada al cajero.
+
+        A partir de este momento el pedido es inmutable: no se pueden agregar,
+        modificar ni eliminar ítems. La mesa permanece OCUPADA hasta que se
+        registre el pago.
+        """
+        order = self.get_object()
+
+        if not order.is_open:
+            return Response(
+                {"detail": "This order has already been sent to the cashier."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.waiter != request.user and request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "You can only send orders you opened."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not order.items.exists():
+            return Response(
+                {"detail": "Add at least one product before sending the order."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order.status = OrderStatus.IN_CASHIER
+        order.sent_to_cashier_at = timezone.now()
+        order.save(update_fields=["status", "sent_to_cashier_at"])
+
+        record_event(
+            event_type=EventType.ORDER_SENT_TO_CASHIER,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Envío a caja del pedido {order.id} de la mesa "
+                f"'{order.table.identifier}'. Total: {order.total}."
+            ),
+            request=request,
+        )
+
+        order.refresh_from_db()
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
