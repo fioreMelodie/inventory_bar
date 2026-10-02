@@ -40,6 +40,7 @@ class EventType(models.TextChoices):
     ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
     ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
     ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Producto agregado a un pedido"
+    ORDER_SENT_TO_CASHIER = "ORDER_SENT_TO_CASHIER", "Pedido enviado a caja"
     STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
     STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
 

@@ -37,6 +37,12 @@ export const ordersService = {
     return data
   },
 
+  /** Formaliza el pedido y lo traslada al cajero (HU21). */
+  async sendToCashier(orderId) {
+    const { data } = await api.post(`/orders/${orderId}/send-to-cashier/`, {})
+    return data
+  },
+
   /** Cancela un pedido abierto y reintegra el stock (HU16). */
   async cancel(orderId) {
     const { data } = await api.post(`/orders/${orderId}/cancel/`, {})
