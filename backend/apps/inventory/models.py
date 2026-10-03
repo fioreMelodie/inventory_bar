@@ -45,6 +45,8 @@ class MovementType(models.TextChoices):
     """Origen de un movimiento de inventario."""
 
     ENTRY = "ENTRY", "Entrada de mercancía"
+    ORDER_DISCOUNT = "ORDER_DISCOUNT", "Descuento por pedido"
+    ORDER_RESTORE = "ORDER_RESTORE", "Reintegro por cancelación de pedido"
 
 
 class StockMovement(models.Model):
@@ -74,6 +76,16 @@ class StockMovement(models.Model):
     # Positiva en las entradas y negativa en las salidas, de modo que la suma
     # de los movimientos reconstruye el stock actual.
     quantity = models.IntegerField("cantidad")
+    # Los movimientos originados por un pedido guardan su referencia, de modo
+    # que el consumo sea trazable hasta la orden que lo produjo.
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="stock_movements",
+        verbose_name="pedido",
+    )
     performed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

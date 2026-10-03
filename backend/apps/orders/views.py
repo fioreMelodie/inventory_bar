@@ -1,0 +1,290 @@
+"""
+Vistas del Módulo 8 - Gestión de Pedidos.
+
+HU19: Crear pedido (Mesero).
+HU16: Descuento automático de stock y reintegro al cancelar.
+HU20: Agregar productos a un pedido.
+HU21: Enviar pedido a caja.
+"""
+from django.db import transaction
+from django.utils import timezone
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
+from rest_framework.response import Response
+
+from apps.accounts.models import Role
+from apps.audit.models import EventType
+from apps.audit.services import record_event
+from apps.inventory.services import InsufficientStock, discount_for_order, restore_for_order
+from apps.tables.models import TableStatus
+
+from .models import Order, OrderItem, OrderStatus
+from .serializers import AddOrderItemSerializer, OrderCreateSerializer, OrderSerializer
+
+
+class CanTakeOrders(BasePermission):
+    """
+    Toman pedidos el Mesero y el Administrador.
+
+    El Administrador puede asumir el rol de mesero cuando la operación lo
+    requiera (propuesta comercial V1.1, sección 02).
+    """
+
+    message = "Only waiters and administrators can take orders."
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return True
+        return request.user.role in (Role.WAITER, Role.ADMIN)
+
+
+class OrderViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Pedidos asociados a mesas.
+
+    - POST /api/orders/  abre un pedido sobre una mesa libre (HU19).
+    - GET  /api/orders/  lista los pedidos de la sede.
+
+    Los pedidos no se eliminan: quedan registrados de forma permanente.
+    """
+
+    queryset = Order.objects.select_related("venue", "table", "waiter").prefetch_related(
+        "items__product"
+    )
+    permission_classes = [CanTakeOrders]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return OrderCreateSerializer
+        return OrderSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Cajero y Mesero solo acceden a los pedidos de su sede asignada.
+        if self.request.user.role != Role.ADMIN:
+            queryset = queryset.filter(venue=self.request.user.venue)
+        else:
+            venue_id = self.request.query_params.get("venue")
+            if venue_id:
+                queryset = queryset.filter(venue_id=venue_id)
+
+        order_status = self.request.query_params.get("status")
+        if order_status:
+            queryset = queryset.filter(status=order_status)
+
+        table_id = self.request.query_params.get("table")
+        if table_id:
+            queryset = queryset.filter(table_id=table_id)
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        """Abre el pedido y marca la mesa como ocupada."""
+        serializer = OrderCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        table = serializer.validated_data["table"]
+
+        with transaction.atomic():
+            order = Order.objects.create(
+                venue=table.venue,
+                table=table,
+                waiter=request.user,
+                status=OrderStatus.OPEN,
+            )
+            table.status = TableStatus.OCCUPIED
+            table.save(update_fields=["status", "updated_at"])
+
+        record_event(
+            event_type=EventType.ORDER_OPENED,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Apertura del pedido {order.id} en la mesa '{table.identifier}' "
+                f"de la sede '{table.venue.name}'."
+            ),
+            request=request,
+        )
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """
+        POST /api/orders/{id}/cancel/
+
+        Cancela un pedido ABIERTO, reintegra al inventario las unidades que
+        había descontado y libera la mesa.
+
+        El pedido no se elimina: queda registrado en estado CANCELADO, porque
+        el histórico de pedidos es permanente. Un pedido ya enviado a caja no
+        puede cancelarse.
+        """
+        order = self.get_object()
+
+        if not order.is_open:
+            return Response(
+                {"detail": "Only open orders can be cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            restore_for_order(order=order, performed_by=request.user, request=request)
+
+            order.status = OrderStatus.CANCELLED
+            order.save(update_fields=["status"])
+
+            table = order.table
+            table.status = TableStatus.FREE
+            table.save(update_fields=["status", "updated_at"])
+
+        record_event(
+            event_type=EventType.ORDER_CANCELLED,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Cancelación del pedido {order.id} de la mesa "
+                f"'{table.identifier}'. El stock descontado fue reintegrado."
+            ),
+            request=request,
+        )
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="items")
+    def add_item(self, request, pk=None):
+        """
+        POST /api/orders/{id}/items/
+
+        Agrega un producto al pedido y descuenta el stock de la sede en el
+        mismo momento. Si el producto ya está en el pedido, se acumulan las
+        cantidades sobre la misma línea.
+
+        El total del pedido se recalcula automáticamente.
+        """
+        order = self.get_object()
+
+        if not order.is_open:
+            return Response(
+                {"detail": "This order is no longer open and cannot be modified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.waiter != request.user and request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "You can only modify orders you opened."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = AddOrderItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.validated_data["product"]
+        quantity = serializer.validated_data["quantity"]
+
+        try:
+            with transaction.atomic():
+                # El descuento se hace primero: si no hay stock suficiente, la
+                # excepción revierte la transacción y el ítem no se agrega.
+                discount_for_order(
+                    order=order,
+                    product=product,
+                    quantity=quantity,
+                    performed_by=request.user,
+                    request=request,
+                )
+
+                item, created = OrderItem.objects.get_or_create(
+                    order=order,
+                    product=product,
+                    defaults={
+                        # El precio se congela al momento de agregar el ítem.
+                        "unit_price": product.sale_price,
+                        "quantity": quantity,
+                    },
+                )
+                if not created:
+                    item.quantity += quantity
+                    item.save(update_fields=["quantity"])
+
+                order.recalculate_total()
+        except InsufficientStock as error:
+            return Response({"detail": str(error)}, status=status.HTTP_409_CONFLICT)
+
+        record_event(
+            event_type=EventType.ORDER_ITEM_ADDED,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Se agregaron {quantity} unidades de '{product.name}' al pedido "
+                f"{order.id}. Total del pedido: {order.total}."
+            ),
+            request=request,
+        )
+
+        order.refresh_from_db()
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="send-to-cashier")
+    def send_to_cashier(self, request, pk=None):
+        """
+        POST /api/orders/{id}/send-to-cashier/
+
+        Formaliza el pedido y lo traslada al cajero.
+
+        A partir de este momento el pedido es inmutable: no se pueden agregar,
+        modificar ni eliminar ítems. La mesa permanece OCUPADA hasta que se
+        registre el pago.
+        """
+        order = self.get_object()
+
+        if not order.is_open:
+            return Response(
+                {"detail": "This order has already been sent to the cashier."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.waiter != request.user and request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "You can only send orders you opened."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not order.items.exists():
+            return Response(
+                {"detail": "Add at least one product before sending the order."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order.status = OrderStatus.IN_CASHIER
+        order.sent_to_cashier_at = timezone.now()
+        order.save(update_fields=["status", "sent_to_cashier_at"])
+
+        record_event(
+            event_type=EventType.ORDER_SENT_TO_CASHIER,
+            username=request.user.username,
+            user=request.user,
+            entity="Order",
+            entity_id=order.id,
+            description=(
+                f"Envío a caja del pedido {order.id} de la mesa "
+                f"'{order.table.identifier}'. Total: {order.total}."
+            ),
+            request=request,
+        )
+
+        order.refresh_from_db()
+        return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)

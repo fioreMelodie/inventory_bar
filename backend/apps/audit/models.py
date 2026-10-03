@@ -34,6 +34,15 @@ class EventType(models.TextChoices):
     SUPPLIER_DELETED = "SUPPLIER_DELETED", "Eliminación de proveedor"
     SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Asociación de productos a proveedor"
     STOCK_ENTRY = "STOCK_ENTRY", "Entrada de mercancía al inventario"
+    TABLE_CREATED = "TABLE_CREATED", "Creación de mesa"
+    TABLE_UPDATED = "TABLE_UPDATED", "Modificación de mesa"
+    TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
+    ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
+    ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
+    ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Producto agregado a un pedido"
+    ORDER_SENT_TO_CASHIER = "ORDER_SENT_TO_CASHIER", "Pedido enviado a caja"
+    STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
+    STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
 
 
 class AuditEventQuerySet(models.QuerySet):

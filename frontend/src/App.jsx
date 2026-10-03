@@ -4,8 +4,11 @@ import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import InventoryPage from './pages/InventoryPage'
+import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
+import RoomPage from './pages/RoomPage'
 import SuppliersPage from './pages/SuppliersPage'
+import TablesPage from './pages/TablesPage'
 import UsersPage from './pages/UsersPage'
 import VenuesPage from './pages/VenuesPage'
 
@@ -55,10 +58,37 @@ export default function App() {
         />
 
         <Route
+          path="/admin/tables"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <TablesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/inventory"
           element={
             <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
               <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/room"
+          element={
+            <ProtectedRoute>
+              <RoomPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/orders/:orderId"
+          element={
+            <ProtectedRoute>
+              <OrderDetailPage />
             </ProtectedRoute>
           }
         />
