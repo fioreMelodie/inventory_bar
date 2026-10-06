@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import CashierPage from './pages/CashierPage'
 import InventoryPage from './pages/InventoryPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
@@ -71,6 +72,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
               <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/cashier/orders"
+          element={
+            <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
+              <CashierPage />
             </ProtectedRoute>
           }
         />

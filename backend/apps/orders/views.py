@@ -5,6 +5,7 @@ HU19: Crear pedido (Mesero).
 HU16: Descuento automático de stock y reintegro al cancelar.
 HU20: Agregar productos a un pedido.
 HU21: Enviar pedido a caja.
+HU22: Consultar pedidos activos (Cajero).
 """
 from django.db import transaction
 from django.utils import timezone
@@ -80,6 +81,11 @@ class OrderViewSet(
         order_status = self.request.query_params.get("status")
         if order_status:
             queryset = queryset.filter(status=order_status)
+
+            # El panel de caja se atiende en orden de llegada, por lo que los
+            # pedidos enviados se ordenan por hora de envío ascendente (HU22).
+            if order_status == OrderStatus.IN_CASHIER:
+                queryset = queryset.order_by("sent_to_cashier_at")
 
         table_id = self.request.query_params.get("table")
         if table_id:
