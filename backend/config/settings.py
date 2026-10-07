@@ -122,6 +122,9 @@ if os.getenv("DB_ENGINE", "sqlite") == "mysql":
             },
         }
     }
+    # Bases administradas (Aiven, Railway externo) exigen conexión cifrada.
+    if env_bool("DB_SSL", False):
+        DATABASES["default"]["OPTIONS"]["ssl"] = {"check_hostname": False}
 else:
     DATABASES = {
         "default": {
@@ -207,6 +210,11 @@ SILENCED_SYSTEM_CHECKS = ["models.W036"]
 # Producción detrás de un proxy HTTPS (Railway / Vercel)
 # --------------------------------------------------------------------------
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
+
+# En Vercel (funciones serverless) no se ejecuta collectstatic: WhiteNoise
+# sirve los estáticos del admin directamente desde las apps.
+if os.getenv("VERCEL"):
+    WHITENOISE_USE_FINDERS = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
