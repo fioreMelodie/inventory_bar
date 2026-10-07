@@ -69,6 +69,8 @@ AUTH_USER_MODEL = "accounts.User"
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Sirve los archivos estáticos (panel de administración) en producción.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -149,10 +151,12 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Imágenes de producto y demás archivos cargados por los usuarios.
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# En producción (Railway) apunta al volumen persistente, p. ej. MEDIA_ROOT=/app/media
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -194,3 +198,16 @@ SIMPLE_JWT = {
 # --------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = env_list("FRONTEND_URL", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+
+# La regla "un pedido OPEN por mesa" se crea en MySQL con la migración
+# orders.0003 (índice funcional), por eso se silencia este aviso.
+SILENCED_SYSTEM_CHECKS = ["models.W036"]
+
+# --------------------------------------------------------------------------
+# Producción detrás de un proxy HTTPS (Railway / Vercel)
+# --------------------------------------------------------------------------
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
