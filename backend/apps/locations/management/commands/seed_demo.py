@@ -22,34 +22,36 @@ from apps.orders.models import Order, OrderItem, OrderStatus
 from apps.suppliers.models import Supplier
 from apps.tables.models import Table, TableStatus
 
+# Los datos van en inglés, igual que la interfaz de usuario. Los nombres de las
+# sedes y las marcas son nombres propios y se conservan.
 VENUES = [
-    ("Galería", "Cra. 24 #53-20, Galerías, Bogotá", "galeria"),
-    ("Zona T", "Cl. 82 #12-15, Zona T, Bogotá", "zonat"),
-    ("Modelia", "Cra. 75 #24C-40, Modelia, Bogotá", "modelia"),
+    ("Galería", "24th Avenue #53-20, Galerías, Bogotá", "galeria"),
+    ("Zona T", "82nd Street #12-15, Zona T, Bogotá", "zonat"),
+    ("Modelia", "75th Avenue #24C-40, Modelia, Bogotá", "modelia"),
 ]
 
 SUPPLIERS = [
-    ("Bavaria S.A.", "6016389000", "pedidos@bavaria-demo.co"),
-    ("Licores de Colombia", "6017451200", "ventas@licorescol-demo.co"),
-    ("Postobón", "6014237700", "clientes@postobon-demo.co"),
-    ("Café Andino", "3104567890", "contacto@cafeandino-demo.co"),
+    ("Bavaria Brewery", "6016389000", "orders@bavaria-demo.co"),
+    ("Colombian Liquors Co.", "6017451200", "sales@colliquors-demo.co"),
+    ("Postobón Beverages", "6014237700", "customers@postobon-demo.co"),
+    ("Andean Coffee Co.", "3104567890", "contact@andeancoffee-demo.co"),
 ]
 
 # nombre, tipo, categoría, compra, venta, proveedor
 PRODUCTS = [
-    ("Club Colombia Dorada", "Bebida", "Cerveza", 2800, 7000, "Bavaria S.A."),
-    ("Águila", "Bebida", "Cerveza", 2200, 6000, "Bavaria S.A."),
-    ("Poker", "Bebida", "Cerveza", 2100, 5500, "Bavaria S.A."),
-    ("Corona", "Bebida", "Cerveza", 3500, 9000, "Bavaria S.A."),
-    ("Aguardiente Antioqueño 375 ml", "Bebida", "Licor", 22000, 55000, "Licores de Colombia"),
-    ("Ron Viejo de Caldas 375 ml", "Bebida", "Licor", 25000, 60000, "Licores de Colombia"),
-    ("Whisky Old Parr 750 ml", "Bebida", "Licor", 95000, 220000, "Licores de Colombia"),
-    ("Gaseosa Colombiana", "Bebida", "Gaseosa", 1500, 4000, "Postobón"),
-    ("Agua Cristal", "Bebida", "Agua", 1000, 3500, "Postobón"),
-    ("Café tinto", "Bebida", "Café", 600, 3000, "Café Andino"),
-    ("Capuccino", "Bebida", "Café", 1800, 7000, "Café Andino"),
-    ("Papas de paquete", "Comida", "Pasabocas", 1200, 4000, None),
-    ("Maní salado", "Comida", "Pasabocas", 900, 3500, None),
+    ("Club Colombia Golden Beer", "Beverage", "Beer", 2800, 7000, "Bavaria Brewery"),
+    ("Aguila Beer", "Beverage", "Beer", 2200, 6000, "Bavaria Brewery"),
+    ("Poker Beer", "Beverage", "Beer", 2100, 5500, "Bavaria Brewery"),
+    ("Corona Beer", "Beverage", "Beer", 3500, 9000, "Bavaria Brewery"),
+    ("Antioqueño Aguardiente 375 ml", "Beverage", "Liquor", 22000, 55000, "Colombian Liquors Co."),
+    ("Viejo de Caldas Rum 375 ml", "Beverage", "Liquor", 25000, 60000, "Colombian Liquors Co."),
+    ("Old Parr Whisky 750 ml", "Beverage", "Liquor", 95000, 220000, "Colombian Liquors Co."),
+    ("Colombiana Soda", "Beverage", "Soft Drink", 1500, 4000, "Postobón Beverages"),
+    ("Cristal Bottled Water", "Beverage", "Water", 1000, 3500, "Postobón Beverages"),
+    ("Black Coffee", "Beverage", "Coffee", 600, 3000, "Andean Coffee Co."),
+    ("Cappuccino", "Beverage", "Coffee", 1800, 7000, "Andean Coffee Co."),
+    ("Potato Chips", "Food", "Snacks", 1200, 4000, None),
+    ("Salted Peanuts", "Food", "Snacks", 900, 3500, None),
 ]
 
 # Unidades que entran al inventario de cada sede.
@@ -58,10 +60,10 @@ TABLES_PER_VENUE = 8
 
 # sede, mesa, estado final, [(producto, cantidad), ...]
 ORDERS = [
-    ("Galería", "Mesa 1", OrderStatus.OPEN, [("Club Colombia Dorada", 4), ("Papas de paquete", 2)]),
-    ("Galería", "Mesa 3", OrderStatus.IN_CASHIER, [("Aguardiente Antioqueño 375 ml", 1), ("Agua Cristal", 3)]),
-    ("Zona T", "Mesa 2", OrderStatus.OPEN, [("Corona", 6), ("Maní salado", 2)]),
-    ("Modelia", "Mesa 5", OrderStatus.OPEN, [("Café tinto", 2), ("Capuccino", 1)]),
+    ("Galería", "Table 1", OrderStatus.OPEN, [("Club Colombia Golden Beer", 4), ("Potato Chips", 2)]),
+    ("Galería", "Table 3", OrderStatus.IN_CASHIER, [("Antioqueño Aguardiente 375 ml", 1), ("Cristal Bottled Water", 3)]),
+    ("Zona T", "Table 2", OrderStatus.OPEN, [("Corona Beer", 6), ("Salted Peanuts", 2)]),
+    ("Modelia", "Table 5", OrderStatus.OPEN, [("Black Coffee", 2), ("Cappuccino", 1)]),
 ]
 
 
@@ -114,16 +116,16 @@ class Command(BaseCommand):
 
         for venue in venues.values():
             for number in range(1, TABLES_PER_VENUE + 1):
-                Table.objects.get_or_create(venue=venue, identifier=f"Mesa {number}")
+                Table.objects.get_or_create(venue=venue, identifier=f"Table {number}")
 
         password = options["password"]
         waiters = {}
         created_users = []
         for name, _, slug in VENUES:
             accounts = [
-                (f"cajero.{slug}", f"Cajero {name}", Role.CASHIER),
-                (f"mesero1.{slug}", f"Mesero 1 {name}", Role.WAITER),
-                (f"mesero2.{slug}", f"Mesero 2 {name}", Role.WAITER),
+                (f"cashier.{slug}", f"Cashier {name}", Role.CASHIER),
+                (f"waiter1.{slug}", f"Waiter 1 {name}", Role.WAITER),
+                (f"waiter2.{slug}", f"Waiter 2 {name}", Role.WAITER),
             ]
             for username, full_name, role in accounts:
                 user = User.objects.filter(username=username).first()
