@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { ROLE_LABELS, useAuth } from '../context/AuthContext'
 import useConnectionStatus from '../hooks/useConnectionStatus'
@@ -38,6 +39,10 @@ const MENU_BY_ROLE = {
 export default function AppLayout({ children }) {
   const { user, signOut, reportConnectionLoss } = useAuth()
   const isOnline = useConnectionStatus()
+  const [connectionLost, setConnectionLost] = useState(!isOnline)
+  useEffect(() => {
+    if (!isOnline) setConnectionLost(true)
+  }, [isOnline])
   const menu = MENU_BY_ROLE[user.role] ?? []
 
   return (
@@ -52,7 +57,7 @@ export default function AppLayout({ children }) {
           </div>
 
           <nav className="order-last w-full sm:order-none sm:w-auto">
-            <ul className="flex gap-1">
+            <ul className="flex flex-wrap gap-1">
               {menu.map((item) => (
                 <li key={item.to}>
                   <NavLink
@@ -86,7 +91,7 @@ export default function AppLayout({ children }) {
 
       {children}
 
-      {!isOnline && <ConnectionLostDialog onConfirm={reportConnectionLoss} />}
+      {connectionLost && <ConnectionLostDialog onConfirm={reportConnectionLoss} />}
     </div>
   )
 }

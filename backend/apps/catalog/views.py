@@ -53,13 +53,13 @@ class ProductViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.action not in ("list",):
+        if self.action not in ("list", "retrieve"):
             return queryset
 
         # Solo se muestran productos activos, salvo que el Administrador pida
         # explícitamente ver también los inactivos.
         include_inactive = (
-            self.request.query_params.get("include_inactive") == "true"
+            (self.action == "retrieve" or self.request.query_params.get("include_inactive") == "true")
             and self.request.user.is_admin
         )
         if not include_inactive:

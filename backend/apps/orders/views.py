@@ -68,6 +68,8 @@ class OrderViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.action in ("cancel", "add_item", "send_to_cashier"):
+            queryset = queryset.select_for_update()
 
         # Cajero y Mesero solo acceden a los pedidos de su sede asignada.
         if self.request.user.role != Role.ADMIN:
@@ -94,6 +96,8 @@ class OrderViewSet(
         table = serializer.validated_data["table"]
 
         with transaction.atomic():
+            table = type(table).objects.select_for_update().get(pk=table.pk)
+            serializer.validate_table(table)
             order = Order.objects.create(
                 venue=table.venue,
                 table=table,
@@ -119,6 +123,7 @@ class OrderViewSet(
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def cancel(self, request, pk=None):
         """
         POST /api/orders/{id}/cancel/
@@ -136,6 +141,12 @@ class OrderViewSet(
             return Response(
                 {"detail": "Only open orders can be cancelled."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.waiter != request.user and request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "You can only cancel orders you opened."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         with transaction.atomic():
@@ -164,6 +175,7 @@ class OrderViewSet(
         return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="items")
+    @transaction.atomic
     def add_item(self, request, pk=None):
         """
         POST /api/orders/{id}/items/
@@ -239,6 +251,7 @@ class OrderViewSet(
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="send-to-cashier")
+    @transaction.atomic
     def send_to_cashier(self, request, pk=None):
         """
         POST /api/orders/{id}/send-to-cashier/

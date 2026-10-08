@@ -69,6 +69,9 @@ class OrderCreateSerializer(serializers.Serializer):
     def validate_table(self, value):
         user = self.context["request"].user
 
+        if not value.venue.is_active:
+            raise serializers.ValidationError("This venue is inactive and cannot take new orders.")
+
         # El Mesero solo opera las mesas de su sede asignada.
         if user.role != Role.ADMIN and value.venue != user.venue:
             raise serializers.ValidationError(

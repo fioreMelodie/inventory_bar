@@ -49,7 +49,7 @@ export default function RoomPage() {
     if (isAdmin) loadVenues()
     loadRoom()
 
-    const intervalId = setInterval(loadRoom, REFRESH_INTERVAL_MS)
+    const intervalId = setInterval(() => loadRoom(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -69,10 +69,11 @@ export default function RoomPage() {
     }
   }
 
-  async function loadRoom() {
+  async function loadRoom(background = false) {
     try {
       const data = await tablesService.room({
         venue: isAdmin && venueRef.current ? venueRef.current : undefined,
+        background,
       })
       setTables(data.results)
       setVenueName(data.venue_name)

@@ -1,4 +1,4 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 7 - Gestión de Mesas. */
 export const tablesService = {
@@ -8,17 +8,17 @@ export const tablesService = {
     if (venue) params.venue = venue
     if (includeInactive) params.include_inactive = 'true'
 
-    const { data } = await api.get('/tables/', { params })
-    return data.results ?? data
+    return listAll('/tables/', { params })
   },
 
   /**
    * Vista de sala (HU18): mesas activas de la sede con su estado, el pedido
    * activo y el tiempo que llevan ocupadas.
    */
-  async room({ venue } = {}) {
+  async room({ venue, background = false } = {}) {
     const { data } = await api.get('/tables/room/', {
       params: venue ? { venue } : undefined,
+      headers: background ? { 'X-Session-Activity': 'background' } : undefined,
     })
     return data
   },

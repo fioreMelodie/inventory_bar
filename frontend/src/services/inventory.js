@@ -18,9 +18,10 @@ export const inventoryService = {
    * Stock actual de una sede (HU15).
    * El Cajero siempre recibe el de su sede, aunque indique otra.
    */
-  async stock({ venue } = {}) {
+  async stock({ venue, background = false } = {}) {
     const { data } = await api.get('/inventory/stock/', {
       params: venue ? { venue } : undefined,
+      headers: background ? { 'X-Session-Activity': 'background' } : undefined,
     })
     return data
   },

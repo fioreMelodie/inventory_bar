@@ -286,7 +286,7 @@ class SessionTokenRefreshView(APIView):
                 {"detail": SESSION_CLOSED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
             )
 
-        if timezone.now() - session.last_activity_at > INACTIVITY_TIMEOUT:
+        if timezone.now() - session.last_activity_at >= INACTIVITY_TIMEOUT:
             close_session_by_inactivity(session, request=request)
             return Response(
                 {"detail": SESSION_EXPIRED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
@@ -304,8 +304,9 @@ class SessionTokenRefreshView(APIView):
 
         # La renovación cuenta como actividad: la pide el frontend porque el
         # usuario está operando el sistema.
-        session.last_activity_at = timezone.now()
-        session.save(update_fields=["last_activity_at"])
+        if request.headers.get("X-Session-Activity") != "background":
+            session.last_activity_at = timezone.now()
+            session.save(update_fields=["last_activity_at"])
 
         data = {"access": str(token.access_token)}
 
