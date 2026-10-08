@@ -149,6 +149,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Imágenes de producto y demás archivos cargados por los usuarios.
 MEDIA_URL = "media/"
@@ -194,3 +195,7 @@ SIMPLE_JWT = {
 # --------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = env_list("FRONTEND_URL", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+
+# La regla "un pedido OPEN por mesa" se crea en MySQL con la migración
+# orders.0003 (índice funcional), por eso se silencia este aviso.
+SILENCED_SYSTEM_CHECKS = ["models.W036"]
