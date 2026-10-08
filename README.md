@@ -95,3 +95,5 @@ main
 | Mesero        | Su sede asignada. Pedidos por mesa.                               |
 
 No existe autoregistro: todas las cuentas las crea el Administrador.
+
+Prueba de despliegue automatico.
