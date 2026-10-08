@@ -52,9 +52,6 @@ class TableViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.action not in ("list",):
-            return queryset
-
         # Cajero y Mesero solo ven las mesas de su sede asignada.
         if self.request.user.role != Role.ADMIN:
             queryset = queryset.filter(venue=self.request.user.venue)
@@ -63,7 +60,7 @@ class TableViewSet(
             if venue_id:
                 queryset = queryset.filter(venue_id=venue_id)
 
-        if self.request.query_params.get("include_inactive") != "true":
+        if self.action == "list" and self.request.query_params.get("include_inactive") != "true":
             queryset = queryset.filter(is_active=True)
 
         return queryset
@@ -163,7 +160,7 @@ class TableViewSet(
             .prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=Order.objects.filter(status=OrderStatus.OPEN),
+                    queryset=Order.objects.filter(status__in=[OrderStatus.OPEN, OrderStatus.IN_CASHIER]),
                     to_attr="open_orders",
                 )
             )

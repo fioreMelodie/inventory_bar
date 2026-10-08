@@ -1,16 +1,17 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 8 - Gestión de Pedidos. */
 export const ordersService = {
   /** Lista los pedidos de la sede, opcionalmente filtrados por estado. */
-  async list({ venue, status, table } = {}) {
+  async list({ venue, status, table, background = false } = {}) {
     const params = {}
     if (venue) params.venue = venue
     if (status) params.status = status
     if (table) params.table = table
 
-    const { data } = await api.get('/orders/', { params })
-    return data.results ?? data
+    return listAll('/orders/', {
+      params, headers: background ? { 'X-Session-Activity': 'background' } : undefined,
+    })
   },
 
   /** Consulta un pedido concreto. */

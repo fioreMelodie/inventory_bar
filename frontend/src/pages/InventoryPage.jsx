@@ -29,6 +29,8 @@ export default function InventoryPage() {
   const [stock, setStock] = useState([])
   const [stockVenueName, setStockVenueName] = useState('')
   const [stockSearch, setStockSearch] = useState('')
+  const [stockCategory, setStockCategory] = useState('')
+  const [stockError, setStockError] = useState('')
   const [loadingStock, setLoadingStock] = useState(true)
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function InventoryPage() {
   // El Administrador consulta el stock de la sede seleccionada en el filtro.
   useEffect(() => {
     loadStock()
+    const intervalId = setInterval(() => loadStock(true), 10000)
+    return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venue])
 
@@ -57,20 +61,23 @@ export default function InventoryPage() {
     }
   }
 
+  const categories = [...new Set(stock.map((item) => item.category))].sort()
   const visibleStock = stock.filter((item) =>
-    item.product_name.toLowerCase().includes(stockSearch.trim().toLowerCase()),
+    item.product_name.toLowerCase().includes(stockSearch.trim().toLowerCase()) &&
+    (!stockCategory || item.category === stockCategory),
   )
 
-  async function loadStock() {
-    setLoadingStock(true)
+  async function loadStock(background = false) {
+    if (!background) setLoadingStock(true)
     try {
-      const data = await inventoryService.stock({ venue: isAdmin && venue ? venue : undefined })
+      const data = await inventoryService.stock({
+        venue: isAdmin && venue ? venue : undefined, background,
+      })
       setStock(data.results)
       setStockVenueName(data.venue_name)
+      setStockError('')
     } catch (requestError) {
-      // Sin sedes registradas todavía no hay stock que mostrar.
-      setStock([])
-      setStockVenueName('')
+      setStockError(getErrorMessage(requestError, 'Unable to load stock.'))
     } finally {
       setLoadingStock(false)
     }
@@ -243,6 +250,18 @@ export default function InventoryPage() {
           </div>
 
           <div className="w-full sm:w-64">
+            <label htmlFor="stock-category" className="block text-xs font-medium text-slate-600">
+              Category
+            </label>
+            <select
+              id="stock-category"
+              value={stockCategory}
+              onChange={(event) => setStockCategory(event.target.value)}
+              className="my-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">All categories</option>
+              {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
             <label htmlFor="stock-search" className="block text-xs font-medium text-slate-600">
               Search by product
             </label>
@@ -257,6 +276,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {stockError && <p role="alert" className="mt-3 text-sm text-red-700">{stockError}</p>}
         <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

@@ -6,6 +6,7 @@ import axios from 'axios'
  */
 const api = axios.create({
   baseURL: '/api',
+  timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -42,13 +43,20 @@ function isSessionEndpoint(url = '') {
 // lugar de pedir una cada una, lo que invalidaría los refresh tokens entre sí.
 let refreshInFlight = null
 
-async function refreshAccessToken() {
+async function refreshAccessToken(background = false) {
   const refresh = localStorage.getItem(REFRESH_KEY)
   if (!refresh) throw new Error('No refresh token available')
 
   // Instancia aparte para que esta petición no pase por el interceptor y
   // provoque una recursión infinita.
-  const { data } = await axios.post('/api/auth/refresh/', { refresh })
+  const { data } = await axios.post('/api/auth/refresh/', { refresh }, {
+    timeout: 10000,
+    headers: background ? { 'X-Session-Activity': 'background' } : undefined,
+  })
+
+  if (localStorage.getItem(REFRESH_KEY) !== refresh) {
+    throw new Error('Session changed while refreshing')
+  }
 
   localStorage.setItem(TOKEN_KEY, data.access)
   if (data.refresh) localStorage.setItem(REFRESH_KEY, data.refresh)
@@ -74,7 +82,9 @@ api.interceptors.response.use(
     original._retried = true
 
     try {
-      refreshInFlight = refreshInFlight ?? refreshAccessToken()
+      refreshInFlight = refreshInFlight ?? refreshAccessToken(
+        original.headers?.['X-Session-Activity'] === 'background',
+      )
       const token = await refreshInFlight
 
       original.headers.Authorization = `Bearer ${token}`
@@ -96,6 +106,23 @@ api.interceptors.response.use(
  */
 export function getErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
   return error?.response?.data?.detail || fallback
+}
+
+/** Completa los listados paginados sin perder registros despues de la pagina 1. */
+export async function listAll(url, config = {}) {
+  const results = []
+  let page = 1
+  let next
+  do {
+    const { data } = await api.get(url, {
+      ...config, params: { ...config.params, page },
+    })
+    if (Array.isArray(data)) return data
+    results.push(...data.results)
+    next = data.next
+    page += 1
+  } while (next)
+  return results
 }
 
 export default api

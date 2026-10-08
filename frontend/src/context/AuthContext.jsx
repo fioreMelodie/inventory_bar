@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import useInactivityTimer from '../hooks/useInactivityTimer'
 import api, {
   REFRESH_KEY,
   TOKEN_KEY,
@@ -7,6 +8,28 @@ import api, {
 } from '../services/api'
 
 const AuthContext = createContext(null)
+const PENDING_CLOSES_KEY = 'bar_inventory_pending_closes'
+
+function pendingCloses() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PENDING_CLOSES_KEY) || '[]')
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
+}
+
+function queueClose(endpoint, payload) {
+  const pending = pendingCloses().filter((item) => item.payload.refresh !== payload.refresh)
+  localStorage.setItem(PENDING_CLOSES_KEY, JSON.stringify([...pending, { endpoint, payload }]))
+}
+
+async function notifyClose(endpoint, payload) {
+  queueClose(endpoint, payload)
+  await api.post(endpoint, payload)
+  const remaining = pendingCloses().filter((item) => item.payload.refresh !== payload.refresh)
+  localStorage.setItem(PENDING_CLOSES_KEY, JSON.stringify(remaining))
+}
 
 /** Ruta principal de cada rol tras iniciar sesión (HU01). */
 export const HOME_ROUTE_BY_ROLE = {
@@ -42,6 +65,30 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(readStoredUser)
   const [sessionNotice, setSessionNotice] = useState('')
 
+  useEffect(() => {
+    let inFlight = false
+    async function retryCloses() {
+      if (inFlight || !navigator.onLine) return
+      inFlight = true
+      try {
+        for (const item of pendingCloses()) {
+          await notifyClose(item.endpoint, item.payload)
+        }
+      } catch {
+        // Se conserva el cierre hasta que el servidor vuelva a responder.
+      } finally {
+        inFlight = false
+      }
+    }
+    retryCloses()
+    window.addEventListener('online', retryCloses)
+    const intervalId = setInterval(retryCloses, 5000)
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('online', retryCloses)
+    }
+  }, [])
+
   const login = useCallback(async (username, password) => {
     setSessionNotice('')
     const { data } = await api.post('/auth/login/', { username, password })
@@ -75,17 +122,23 @@ export function AuthProvider({ children }) {
    */
   const expireSessionByInactivity = useCallback(async () => {
     const refresh = localStorage.getItem(REFRESH_KEY)
+    clearSession()
+    setSessionNotice(SESSION_NOTICES.INACTIVITY)
     if (refresh) {
       try {
-        await api.post('/auth/session/expire/', { refresh })
+        await notifyClose('/auth/session/expire/', { refresh })
       } catch {
         // Si la API no responde, la sesión igualmente se cierra en el
         // navegador y el token quedará invalidado al vencer.
       }
     }
-    clearSession()
-    setSessionNotice(SESSION_NOTICES.INACTIVITY)
   }, [clearSession])
+
+  const reportActivity = useCallback(() => {
+    api.get('/auth/me/').catch(() => {})
+  }, [])
+
+  useInactivityTimer(expireSessionByInactivity, Boolean(user), reportActivity)
 
   /**
    * Cierra la sesión en el servidor indicando el motivo, para que quede
@@ -94,29 +147,29 @@ export function AuthProvider({ children }) {
   const closeSession = useCallback(
     async (reason) => {
       const refresh = localStorage.getItem(REFRESH_KEY)
+      clearSession()
       if (refresh) {
         try {
-          await api.post('/auth/logout/', { refresh, reason })
+          await notifyClose('/auth/logout/', { refresh, reason })
         } catch {
           // Sin conexión no es posible notificar al servidor; la sesión se
           // cierra localmente y el token quedará invalidado al vencer.
         }
       }
-      clearSession()
     },
     [clearSession],
   )
 
   /** HU03 - El usuario pulsó "Sign out". */
   const signOut = useCallback(async () => {
-    await closeSession('MANUAL')
     setSessionNotice('')
+    await closeSession('MANUAL')
   }, [closeSession])
 
   /** HU03 - El usuario confirmó el aviso de pérdida de conexión. */
   const reportConnectionLoss = useCallback(async () => {
-    await closeSession('DISCONNECTION')
     setSessionNotice(SESSION_NOTICES.DISCONNECTION)
+    await closeSession('DISCONNECTION')
   }, [closeSession])
 
   const value = useMemo(

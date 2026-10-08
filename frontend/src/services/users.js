@@ -1,13 +1,12 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 3 - Administración de Usuarios. */
 export const usersService = {
   /** Lista las cuentas de usuario. */
   async list({ includeInactive = false } = {}) {
-    const { data } = await api.get('/users/', {
+    return listAll('/users/', {
       params: includeInactive ? { include_inactive: 'true' } : undefined,
     })
-    return data.results ?? data
   },
 
   /** Crea una cuenta con rol y sede asignada (HU06). */

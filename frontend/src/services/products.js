@@ -1,13 +1,12 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 4 - Catálogo de Productos. */
 export const productsService = {
   /** Lista los productos del catálogo. */
   async list({ includeInactive = false } = {}) {
-    const { data } = await api.get('/products/', {
+    return listAll('/products/', {
       params: includeInactive ? { include_inactive: 'true' } : undefined,
     })
-    return data.results ?? data
   },
 
   /**

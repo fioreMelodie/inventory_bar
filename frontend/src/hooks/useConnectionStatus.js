@@ -27,7 +27,7 @@ export default function useConnectionStatus() {
         return
       }
       try {
-        await api.get('/health/', { timeout: CONNECTION_CHECK_INTERVAL_MS })
+        await api.get('/health/', { timeout: CONNECTION_CHECK_INTERVAL_MS / 2 })
         if (!cancelled) setIsOnline(true)
       } catch (error) {
         // Solo se considera desconexión si no hubo respuesta del servidor.
@@ -38,7 +38,8 @@ export default function useConnectionStatus() {
 
     window.addEventListener('offline', goOffline)
     window.addEventListener('online', goOnline)
-    const intervalId = setInterval(checkConnection, CONNECTION_CHECK_INTERVAL_MS)
+    checkConnection()
+    const intervalId = setInterval(checkConnection, CONNECTION_CHECK_INTERVAL_MS / 2)
 
     return () => {
       cancelled = true
