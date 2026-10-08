@@ -39,7 +39,7 @@ services:
     container_name: bar_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${APP_PORT:-80}:80"
     depends_on:
       - backend
     volumes:
