@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
+import PaymentDialog from '../components/PaymentDialog'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { ordersService } from '../services/orders'
@@ -10,6 +11,7 @@ import { formatPrice, productsService } from '../services/products'
  * HU19 - Detalle del pedido abierto.
  * HU20 - Agregar productos y cantidades al pedido.
  * HU21 - Enviar el pedido a caja.
+ * HU23 - El cajero cobra el pedido desde el detalle.
  */
 export default function OrderDetailPage() {
   const { orderId } = useParams()
@@ -31,8 +33,14 @@ export default function OrderDetailPage() {
   const [sendError, setSendError] = useState('')
   const [sending, setSending] = useState(false)
 
+  // HU23 - Cobro del pedido.
+  const [charging, setCharging] = useState(false)
+  const [invoice, setInvoice] = useState(null)
+
   const isOpen = order?.status === 'OPEN'
   const canEdit = isOpen && (order?.waiter === user.id || user.role === 'ADMIN')
+  const canCharge =
+    order?.status === 'IN_CASHIER' && ['CASHIER', 'ADMIN'].includes(user.role)
 
   useEffect(() => {
     loadData()
@@ -89,6 +97,12 @@ export default function OrderDetailPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  function handlePaid(generatedInvoice) {
+    setInvoice(generatedInvoice)
+    setCharging(false)
+    loadData()
   }
 
   const categories = [...new Set(products.map((product) => product.category))].sort()
@@ -164,6 +178,16 @@ export default function OrderDetailPage() {
                 {formatPrice(order.total)}
               </span>
             </p>
+
+            {canCharge && (
+              <button
+                type="button"
+                onClick={() => setCharging(true)}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              >
+                Charge
+              </button>
+            )}
 
             {canEdit && order.items.length > 0 && (
               <button
@@ -304,8 +328,28 @@ export default function OrderDetailPage() {
 
       {!isOpen && (
         <p className="mt-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
-          This order has been sent to the cashier and can no longer be modified.
+          {order.status === 'PAID'
+            ? 'This order has been paid. The table is free again.'
+            : 'This order has been sent to the cashier and can no longer be modified.'}
         </p>
+      )}
+
+      {invoice && (
+        <p
+          role="status"
+          className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        >
+          Payment registered. Invoice {invoice.number} was generated
+          {invoice.change_given > 0 ? '. Change: ' + formatPrice(invoice.change_given) : ''}.
+        </p>
+      )}
+
+      {charging && (
+        <PaymentDialog
+          order={order}
+          onPaid={handlePaid}
+          onCancel={() => setCharging(false)}
+        />
       )}
 
       {confirmingSend && (
