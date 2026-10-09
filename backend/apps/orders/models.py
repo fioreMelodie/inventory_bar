@@ -15,6 +15,7 @@ class OrderStatus(models.TextChoices):
 
     OPEN = "OPEN", "Abierto"
     IN_CASHIER = "IN_CASHIER", "En caja"
+    PAID = "PAID", "Pagado"
     CANCELLED = "CANCELLED", "Cancelado"
 
 
@@ -51,6 +52,7 @@ class Order(models.Model):
     sent_to_cashier_at = models.DateTimeField(
         "fecha y hora de envío a caja", null=True, blank=True
     )
+    paid_at = models.DateTimeField("fecha y hora del pago", null=True, blank=True)
 
     class Meta:
         verbose_name = "pedido"

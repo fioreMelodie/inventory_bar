@@ -46,6 +46,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
             "opened_at",
             "sent_to_cashier_at",
+            "paid_at",
         )
         read_only_fields = fields
 
