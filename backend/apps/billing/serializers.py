@@ -29,6 +29,30 @@ class PaymentSerializer(serializers.Serializer):
             "min_value": "The amount received cannot be negative.",
         },
     )
+    # El cobro con tarjeta ocurre fuera del sistema: el Cajero confirma que el
+    # datáfono aprobó la transacción (criterio de la HU24).
+    card_approved = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        method = attrs.get("payment_method")
+
+        if method in PaymentMethod.card_methods() and not attrs.get("card_approved"):
+            raise serializers.ValidationError(
+                {
+                    "card_approved": (
+                        "Confirm that the card payment was approved on the card reader."
+                    )
+                }
+            )
+
+        # El pedido se cobra con un único método: el campo no admite dos
+        # valores, de modo que efectivo y tarjeta no pueden combinarse.
+        if method == PaymentMethod.CASH and attrs.get("amount_received") is None:
+            raise serializers.ValidationError(
+                {"amount_received": "Enter the amount received from the customer."}
+            )
+
+        return attrs
 
 
 class InvoiceSerializer(serializers.ModelSerializer):

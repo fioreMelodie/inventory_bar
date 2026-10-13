@@ -10,9 +10,23 @@ from django.db import models
 
 
 class PaymentMethod(models.TextChoices):
-    """Métodos de pago aceptados. No se contempla pasarela de pago."""
+    """
+    Métodos de pago aceptados.
+
+    El sistema no se integra con pasarela de pago: el cobro con tarjeta se
+    realiza en un datáfono externo y aquí solo se deja constancia del método
+    utilizado (propuesta comercial V1.1, sección 3.2.1.6).
+    """
+
+    @classmethod
+    def card_methods(cls):
+        """Métodos que se cobran en el datáfono externo."""
+        return (cls.CREDIT_CARD, cls.DEBIT_CARD)
+
 
     CASH = "CASH", "Efectivo"
+    CREDIT_CARD = "CREDIT_CARD", "Tarjeta de crédito"
+    DEBIT_CARD = "DEBIT_CARD", "Tarjeta débito"
 
 
 class InvoiceQuerySet(models.QuerySet):
