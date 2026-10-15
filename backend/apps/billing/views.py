@@ -2,8 +2,10 @@
 Vistas del Módulo 9 - Pagos y Facturación.
 
 HU23: Procesar pago en efectivo.
+HU24: Procesar pago con tarjeta.
+HU25: Generar y consultar la factura.
 """
-from rest_framework import status
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,6 +13,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import Role
 from apps.orders.models import Order
 
+from .models import Invoice
 from .serializers import InvoiceSerializer, PaymentSerializer
 from .services import PaymentError, register_payment
 
@@ -71,3 +74,30 @@ class ChargeOrderView(APIView):
             return Response({"detail": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(InvoiceSerializer(invoice).data, status=status.HTTP_201_CREATED)
+
+
+class InvoiceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """
+    Facturas emitidas.
+
+    - GET /api/invoices/{id}/  consulta una factura (HU25).
+
+    Las facturas son de solo lectura: el conjunto de vistas no expone
+    operaciones de escritura, de modo que no pueden modificarse ni anularse
+    desde la API bajo ningún perfil.
+    """
+
+    queryset = Invoice.objects.select_related(
+        "venue", "order", "order__table", "order__waiter", "cashier"
+    ).prefetch_related("order__items__product")
+    serializer_class = InvoiceSerializer
+    permission_classes = [CanChargeOrders]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # El Cajero solo accede a las facturas de su sede asignada.
+        if self.request.user.role != Role.ADMIN:
+            queryset = queryset.filter(venue=self.request.user.venue)
+
+        return queryset

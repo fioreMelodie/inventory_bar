@@ -20,6 +20,12 @@ export const billingService = {
     const { data } = await api.post(`/orders/${orderId}/pay/`, payload)
     return data
   },
+
+  /** Consulta una factura emitida (HU25). */
+  async retrieve(invoiceId) {
+    const { data } = await api.get(`/invoices/${invoiceId}/`)
+    return data
+  },
 }
 
 /** Métodos de pago aceptados, con su etiqueta en la interfaz. */

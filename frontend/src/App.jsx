@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import CashierPage from './pages/CashierPage'
 import InventoryPage from './pages/InventoryPage'
+import InvoicePage from './pages/InvoicePage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
 import RoomPage from './pages/RoomPage'
@@ -81,6 +82,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
               <CashierPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/billing/invoices/:invoiceId"
+          element={
+            <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
+              <InvoicePage />
             </ProtectedRoute>
           }
         />
