@@ -340,7 +340,13 @@ export default function OrderDetailPage() {
           className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
         >
           Payment registered. Invoice {invoice.number} was generated
-          {invoice.change_given > 0 ? '. Change: ' + formatPrice(invoice.change_given) : ''}.
+          {invoice.change_given > 0 ? '. Change: ' + formatPrice(invoice.change_given) : ''}.{' '}
+          <Link
+            to={'/billing/invoices/' + invoice.id}
+            className="font-medium underline"
+          >
+            View invoice
+          </Link>
         </p>
       )}
 

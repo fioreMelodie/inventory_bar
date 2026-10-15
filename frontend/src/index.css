@@ -11,3 +11,19 @@ body,
 body {
   @apply bg-slate-100 text-slate-800 antialiased;
 }
+
+/*
+ * Impresión de la factura (HU25): se oculta la navegación y se retiran
+ * fondos y márgenes para que el comprobante salga limpio en papel.
+ */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  header[class*='border-b'],
+  nav,
+  button {
+    display: none !important;
+  }
+}
