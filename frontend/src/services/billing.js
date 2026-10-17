@@ -21,6 +21,18 @@ export const billingService = {
     return data
   },
 
+  /** Historial de facturas con filtros combinables (HU26). */
+  async list({ dateFrom, dateTo, number, venue } = {}) {
+    const params = {}
+    if (dateFrom) params.date_from = dateFrom
+    if (dateTo) params.date_to = dateTo
+    if (number) params.number = number.trim()
+    if (venue) params.venue = venue
+
+    const { data } = await api.get('/invoices/', { params })
+    return data.results ?? data
+  },
+
   /** Consulta una factura emitida (HU25). */
   async retrieve(invoiceId) {
     const { data } = await api.get(`/invoices/${invoiceId}/`)

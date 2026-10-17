@@ -15,10 +15,12 @@ const MENU_BY_ROLE = {
     { to: '/admin/tables', label: 'Tables' },
     { to: '/room', label: 'Room' },
     { to: '/cashier/orders', label: 'Cashier' },
+    { to: '/billing', label: 'Invoices' },
   ],
   CASHIER: [
     { to: '/cashier', label: 'Home', end: true },
     { to: '/cashier/orders', label: 'Pending orders' },
+    { to: '/billing', label: 'Invoices' },
     { to: '/room', label: 'Room' },
     { to: '/catalog', label: 'Catalog' },
     { to: '/inventory', label: 'Inventory' },
