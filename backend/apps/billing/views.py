@@ -4,7 +4,9 @@ Vistas del Módulo 9 - Pagos y Facturación.
 HU23: Procesar pago en efectivo.
 HU24: Procesar pago con tarjeta.
 HU25: Generar y consultar la factura.
+HU26: Consultar el historial de facturas.
 """
+from django.utils.dateparse import parse_date
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
@@ -76,11 +78,18 @@ class ChargeOrderView(APIView):
         return Response(InvoiceSerializer(invoice).data, status=status.HTTP_201_CREATED)
 
 
-class InvoiceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class InvoiceViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     """
     Facturas emitidas.
 
+    - GET /api/invoices/       historial con filtros (HU26).
     - GET /api/invoices/{id}/  consulta una factura (HU25).
+
+    El historial admite los filtros `date_from`, `date_to`, `number` y
+    `venue`, combinables entre sí. Cubre desde el inicio del sistema: las
+    facturas nunca se eliminan.
 
     Las facturas son de solo lectura: el conjunto de vistas no expone
     operaciones de escritura, de modo que no pueden modificarse ni anularse
@@ -99,5 +108,38 @@ class InvoiceViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         # El Cajero solo accede a las facturas de su sede asignada.
         if self.request.user.role != Role.ADMIN:
             queryset = queryset.filter(venue=self.request.user.venue)
+        else:
+            venue_id = self.request.query_params.get("venue")
+            if venue_id:
+                queryset = queryset.filter(venue_id=venue_id)
+
+        if self.action != "list":
+            return queryset
+
+        # Los filtros son aditivos: cada uno reduce el conjunto de resultados.
+        date_from = parse_date(self.request.query_params.get("date_from", ""))
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+
+        date_to = parse_date(self.request.query_params.get("date_to", ""))
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+
+        number = self.request.query_params.get("number")
+        if number:
+            queryset = queryset.filter(number__icontains=number.strip())
 
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """Valida el rango de fechas antes de construir el listado."""
+        date_from = parse_date(request.query_params.get("date_from", ""))
+        date_to = parse_date(request.query_params.get("date_to", ""))
+
+        if date_from and date_to and date_from > date_to:
+            return Response(
+                {"detail": "The start date cannot be later than the end date."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return super().list(request, *args, **kwargs)
