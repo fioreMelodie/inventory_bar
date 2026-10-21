@@ -9,6 +9,7 @@ import InventoryPage from './pages/InventoryPage'
 import InvoicePage from './pages/InvoicePage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
+import ReportsPage from './pages/ReportsPage'
 import RoomPage from './pages/RoomPage'
 import SuppliersPage from './pages/SuppliersPage'
 import TablesPage from './pages/TablesPage'
@@ -83,6 +84,15 @@ export default function App() {
           element={
             <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
               <CashierPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

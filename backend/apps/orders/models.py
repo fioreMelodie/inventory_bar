@@ -113,6 +113,10 @@ class OrderItem(models.Model):
     )
     quantity = models.PositiveIntegerField("cantidad")
     unit_price = models.PositiveIntegerField("precio unitario")
+    # El valor de compra también se congela: el reporte de ventas calcula la
+    # ganancia con el costo vigente al momento de la venta, no con el actual
+    # del catálogo (HU27).
+    unit_cost = models.PositiveIntegerField("valor de compra unitario", default=0)
     created_at = models.DateTimeField("fecha y hora", auto_now_add=True)
 
     class Meta:
@@ -134,3 +138,13 @@ class OrderItem(models.Model):
     def subtotal(self):
         """Importe de la línea: cantidad por precio unitario."""
         return self.quantity * self.unit_price
+
+    @property
+    def cost_total(self):
+        """Costo de la línea: cantidad por valor de compra unitario."""
+        return self.quantity * self.unit_cost
+
+    @property
+    def profit(self):
+        """Ganancia de la línea: venta menos costo."""
+        return self.subtotal - self.cost_total

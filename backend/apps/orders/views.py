@@ -215,8 +215,9 @@ class OrderViewSet(
                     order=order,
                     product=product,
                     defaults={
-                        # El precio se congela al momento de agregar el ítem.
+                        # Precio y costo se congelan al agregar el ítem.
                         "unit_price": product.sale_price,
+                        "unit_cost": product.purchase_price,
                         "quantity": quantity,
                     },
                 )
