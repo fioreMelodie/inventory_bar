@@ -65,6 +65,26 @@ class CreateProductTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Product.objects.count(), 1)
 
+    def test_no_se_crea_con_venta_menor_que_compra(self):
+        for request_format in ("json", "multipart"):
+            with self.subTest(request_format=request_format):
+                response = self.client.post(
+                    self.url,
+                    self.payload(name=f"QA product {request_format}", sale_price=3499),
+                    format=request_format,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("sale_price", response.data)
+        self.assertFalse(Product.objects.exists())
+        self.assertFalse(AuditEvent.objects.filter(event_type=EventType.PRODUCT_CREATED).exists())
+
+    def test_se_permite_venta_igual_que_compra(self):
+        response = self.client.post(self.url, self.payload(sale_price=3500), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        product = Product.objects.get(pk=response.data["id"])
+        self.assertEqual(product.sale_price, product.purchase_price)
+
     def test_la_unicidad_del_nombre_ignora_mayusculas(self):
         """'cerveza club colombia' y 'Cerveza Club Colombia' son el mismo producto."""
         self.client.post(self.url, self.payload(), format="json")

@@ -89,9 +89,9 @@ class ProductViewSet(
             entity="Product",
             entity_id=product.id,
             description=(
-                f"Creación del producto '{product.name}' "
+                f"Created product '{product.name}' "
                 f"({product.product_type} / {product.category}) "
-                f"con valor de venta {product.sale_price}."
+                f"with sale price {product.sale_price}."
             ),
             request=self.request,
         )
@@ -130,9 +130,9 @@ class ProductViewSet(
             entity="Product",
             entity_id=product.id,
             description=(
-                f"Edición del producto '{product.name}'. " + "; ".join(changes)
+                f"Updated product '{product.name}'. " + "; ".join(changes)
                 if changes
-                else f"Edición del producto '{product.name}' sin cambios efectivos."
+                else f"Updated product '{product.name}' with no effective changes."
             ),
             request=self.request,
         )

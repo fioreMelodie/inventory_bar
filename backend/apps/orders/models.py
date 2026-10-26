@@ -13,9 +13,10 @@ from django.utils import timezone
 class OrderStatus(models.TextChoices):
     """Estados por los que pasa un pedido."""
 
-    OPEN = "OPEN", "Abierto"
-    IN_CASHIER = "IN_CASHIER", "En caja"
-    CANCELLED = "CANCELLED", "Cancelado"
+    OPEN = "OPEN", "Open"
+    IN_CASHIER = "IN_CASHIER", "In cashier"
+    CANCELLED = "CANCELLED", "Cancelled"
+    PAID = "PAID", "Paid"
 
 
 class Order(models.Model):
@@ -25,36 +26,36 @@ class Order(models.Model):
         "locations.Venue",
         on_delete=models.PROTECT,
         related_name="orders",
-        verbose_name="sede",
+        verbose_name="venue",
     )
     table = models.ForeignKey(
         "tables.Table",
         on_delete=models.PROTECT,
         related_name="orders",
-        verbose_name="mesa",
+        verbose_name="table",
     )
     waiter = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="orders",
-        verbose_name="mesero",
+        verbose_name="waiter",
     )
 
     status = models.CharField(
-        "estado", max_length=20, choices=OrderStatus.choices, default=OrderStatus.OPEN
+        "status", max_length=20, choices=OrderStatus.choices, default=OrderStatus.OPEN
     )
 
     # El total se mantiene calculado a partir de los ítems del pedido.
     total = models.PositiveIntegerField("total", default=0)
 
-    opened_at = models.DateTimeField("fecha y hora de apertura", default=timezone.now)
+    opened_at = models.DateTimeField("opened at", default=timezone.now)
     sent_to_cashier_at = models.DateTimeField(
-        "fecha y hora de envío a caja", null=True, blank=True
+        "sent to cashier at", null=True, blank=True
     )
 
     class Meta:
-        verbose_name = "pedido"
-        verbose_name_plural = "pedidos"
+        verbose_name = "order"
+        verbose_name_plural = "orders"
         ordering = ["-opened_at"]
         constraints = [
             # Una mesa ocupada solo puede tener un pedido activo a la vez.
@@ -66,7 +67,7 @@ class Order(models.Model):
         ]
 
     def __str__(self):
-        return f"Pedido {self.id} - {self.table.identifier} ({self.get_status_display()})"
+        return f"Order {self.id} - {self.table.identifier} ({self.get_status_display()})"
 
     @property
     def is_open(self):
@@ -101,21 +102,21 @@ class OrderItem(models.Model):
         Order,
         on_delete=models.CASCADE,
         related_name="items",
-        verbose_name="pedido",
+        verbose_name="order",
     )
     product = models.ForeignKey(
         "catalog.Product",
         on_delete=models.PROTECT,
         related_name="order_items",
-        verbose_name="producto",
+        verbose_name="product",
     )
-    quantity = models.PositiveIntegerField("cantidad")
-    unit_price = models.PositiveIntegerField("precio unitario")
-    created_at = models.DateTimeField("fecha y hora", auto_now_add=True)
+    quantity = models.PositiveIntegerField("quantity")
+    unit_price = models.PositiveIntegerField("unit price")
+    created_at = models.DateTimeField("date and time", auto_now_add=True)
 
     class Meta:
-        verbose_name = "ítem de pedido"
-        verbose_name_plural = "ítems de pedido"
+        verbose_name = "order item"
+        verbose_name_plural = "order items"
         ordering = ["created_at"]
         constraints = [
             # Un producto aparece una sola vez por pedido: las cantidades se
@@ -126,7 +127,7 @@ class OrderItem(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} (pedido {self.order_id})"
+        return f"{self.quantity} x {self.product.name} (order {self.order_id})"
 
     @property
     def subtotal(self):

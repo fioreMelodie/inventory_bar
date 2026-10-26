@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Search, Plus, X, Pencil } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
@@ -27,6 +28,12 @@ export default function UsersPage() {
   const [venues, setVenues] = useState([])
   const [loading, setLoading] = useState(true)
   const [includeInactive, setIncludeInactive] = useState(false)
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const visibleUsers = users.filter(user =>
+    (!roleFilter || user.role === roleFilter) &&
+    [user.full_name, user.username, user.venue_name || ''].some(value => value.toLowerCase().includes(search.trim().toLowerCase())),
+  )
 
   const [userToDeactivate, setUserToDeactivate] = useState(null)
   const [statusError, setStatusError] = useState('')
@@ -174,16 +181,14 @@ export default function UsersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Users</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Accounts are created here. Self-registration is not available.
-          </p>
         </div>
 
         <button
           type="button"
           onClick={showForm ? () => setShowForm(false) : openCreateForm}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+          className="primary-button"
         >
+          {showForm ? <X size={16} /> : <Plus size={16} />}
           {showForm ? 'Cancel' : 'New user'}
         </button>
       </div>
@@ -334,7 +339,20 @@ export default function UsersPage() {
         </form>
       )}
 
-      <label className="mt-6 flex items-center gap-2 text-sm text-slate-600">
+      <div className="user-toolbar">
+        <div className="user-search">
+          <label htmlFor="user-search" className="block text-xs text-slate-500">Search users</label>
+          <Search size={16} aria-hidden="true" />
+          <input id="user-search" type="search" placeholder="Name, username or venue..." value={search} onChange={event => setSearch(event.target.value)} className="border px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="user-role-filter" className="block text-xs text-slate-500">Role</label>
+          <select id="user-role-filter" className="mt-1 border px-3 py-2 text-sm" value={roleFilter} onChange={event => setRoleFilter(event.target.value)}>
+            <option value="">All roles</option>
+            {ROLE_OPTIONS.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
+          </select>
+        </div>
+      <label className="flex items-center gap-2 py-3 text-xs text-slate-600">
         <input
           type="checkbox"
           checked={includeInactive}
@@ -343,6 +361,8 @@ export default function UsersPage() {
         />
         Show inactive users
       </label>
+      </div>
+      <p className="mt-4 text-xs text-slate-500" aria-live="polite">{loading ? 'Loading...' : visibleUsers.length + ' users'}</p>
 
       <section className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -378,18 +398,18 @@ export default function UsersPage() {
                 </tr>
               )}
 
-              {!loading && users.length === 0 && (
+              {!loading && visibleUsers.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
-                    No users registered yet.
+                    {users.length ? 'No users match the current filters.' : 'No users registered yet.'}
                   </td>
                 </tr>
               )}
 
               {!loading &&
-                users.map((user) => (
+                visibleUsers.map((user) => (
                   <tr key={user.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">{user.full_name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900"><span className="flex items-center gap-3"><span className="avatar" aria-hidden="true">{user.full_name.slice(0, 1)}</span>{user.full_name}</span></td>
                     <td className="px-4 py-3 text-slate-600">{user.username}</td>
                     <td className="px-4 py-3 text-slate-600">
                       {ROLE_OPTIONS.find((option) => option.value === user.role)?.label}
@@ -411,9 +431,11 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={() => openEditForm(user)}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                          className="icon-button"
+                          aria-label={'Edit ' + user.username}
+                          title={'Edit ' + user.username}
                         >
-                          Edit
+                          <Pencil size={16} />
                         </button>
 
                         {user.is_active ? (

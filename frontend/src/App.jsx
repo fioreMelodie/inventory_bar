@@ -2,6 +2,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
+import PendingOrdersPage from './pages/PendingOrdersPage'
+import InvoicePage from './pages/InvoicePage'
+import InvoicesPage from './pages/InvoicesPage'
+import SalesReportPage from './pages/SalesReportPage'
+import AuditEventsPage from './pages/AuditEventsPage'
 import LoginPage from './pages/LoginPage'
 import InventoryPage from './pages/InventoryPage'
 import OrderDetailPage from './pages/OrderDetailPage'
@@ -20,6 +25,12 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        <Route path="/audit/events" element={<ProtectedRoute roles={['ADMIN']}><AuditEventsPage /></ProtectedRoute>} />
+        <Route path="/reports/my-sales" element={<ProtectedRoute roles={['CASHIER']}><SalesReportPage /></ProtectedRoute>} />
+        <Route path="/reports/sales" element={<ProtectedRoute roles={['ADMIN']}><SalesReportPage /></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><InvoicesPage /></ProtectedRoute>} />
+        <Route path="/invoices/:invoiceId" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><InvoicePage /></ProtectedRoute>} />
+        <Route path="/cashier/pending" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><PendingOrdersPage /></ProtectedRoute>} />
         <Route path="/login" element={<LoginPage />} />
 
         <Route

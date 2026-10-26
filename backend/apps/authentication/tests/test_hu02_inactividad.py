@@ -94,7 +94,7 @@ class InactivityTimeoutTests(APITestCase):
         self.assertIsNotNone(evento)
         self.assertEqual(evento.username, "cajero1")
         self.assertEqual(evento.user, self.user)
-        self.assertIn("inactividad", evento.description.lower())
+        self.assertIn("inactivity", evento.description.lower())
         self.assertIsNotNone(evento.created_at)
 
     def test_endpoint_de_expiracion_cierra_la_sesion(self):

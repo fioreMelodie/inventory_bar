@@ -12,23 +12,23 @@ class Venue(models.Model):
     """Sede del negocio (Galería, Zona T, Modelia, ...)."""
 
     name = models.CharField(
-        "nombre",
+        "name",
         max_length=120,
         unique=True,
-        help_text="No pueden existir dos sedes con el mismo nombre.",
+        help_text="Venue names must be unique.",
     )
-    address = models.CharField("dirección", max_length=255, blank=True)
+    address = models.CharField("address", max_length=255, blank=True)
 
     # Una sede inactiva conserva íntegro su historial, pero deja de estar
     # disponible para nuevas operaciones (HU05).
-    is_active = models.BooleanField("activa", default=True)
+    is_active = models.BooleanField("active", default=True)
 
-    created_at = models.DateTimeField("fecha de creación", auto_now_add=True)
-    updated_at = models.DateTimeField("última modificación", auto_now=True)
+    created_at = models.DateTimeField("created at", auto_now_add=True)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     class Meta:
-        verbose_name = "sede"
-        verbose_name_plural = "sedes"
+        verbose_name = "venue"
+        verbose_name_plural = "venues"
         ordering = ["name"]
 
     def __str__(self):

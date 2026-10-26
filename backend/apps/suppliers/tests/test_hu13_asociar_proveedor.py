@@ -173,7 +173,7 @@ class LinkSupplierProductsTests(APITestCase):
         ).first()
         self.assertIsNotNone(evento)
         self.assertIn("Distribuidora Bavaria", evento.description)
-        self.assertIn("Asociados: 1", evento.description)
+        self.assertIn("Linked: 1", evento.description)
 
     def test_solo_el_administrador_puede_asociar_productos(self):
         """La operación es exclusiva del Administrador."""

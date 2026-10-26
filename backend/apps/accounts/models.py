@@ -17,13 +17,13 @@ class Role(models.TextChoices):
     Roles operativos del sistema.
 
     Los valores almacenados están en inglés para mantener coherencia con la
-    interfaz de usuario; las etiquetas en español se usan en el panel de
+    interfaz de usuario; las etiquetas en inglés se usan en el panel de
     administración y la documentación.
     """
 
-    ADMIN = "ADMIN", "Administrador"
-    CASHIER = "CASHIER", "Cajero"
-    WAITER = "WAITER", "Mesero"
+    ADMIN = "ADMIN", "Administrator"
+    CASHIER = "CASHIER", "Cashier"
+    WAITER = "WAITER", "Waiter"
 
 
 class UserManager(BaseUserManager):
@@ -33,7 +33,7 @@ class UserManager(BaseUserManager):
 
     def create_user(self, username, password=None, **extra_fields):
         if not username:
-            raise ValueError("El nombre de usuario es obligatorio.")
+            raise ValueError("Username is required.")
         extra_fields.setdefault("is_active", True)
         user = self.model(username=username, **extra_fields)
         # set_password aplica el algoritmo de hashing configurado en Django
@@ -49,9 +49,9 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_active", True)
 
         if extra_fields.get("is_staff") is not True:
-            raise ValueError("El superusuario debe tener is_staff=True.")
+            raise ValueError("A superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
-            raise ValueError("El superusuario debe tener is_superuser=True.")
+            raise ValueError("A superuser must have is_superuser=True.")
 
         return self.create_user(username, password, **extra_fields)
 
@@ -60,13 +60,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     """Cuenta de acceso al sistema, con rol operativo asignado."""
 
     username = models.CharField(
-        "nombre de usuario",
+        "username",
         max_length=150,
         unique=True,
-        help_text="Debe ser único en todo el sistema.",
+        help_text="Must be unique across the system.",
     )
-    full_name = models.CharField("nombre completo", max_length=200)
-    role = models.CharField("rol", max_length=20, choices=Role.choices)
+    full_name = models.CharField("full name", max_length=200)
+    role = models.CharField("role", max_length=20, choices=Role.choices)
 
     # La sede asignada determina qué información puede ver el Cajero y el
     # Mesero. El Administrador accede a todas las sedes, por lo que su sede
@@ -77,16 +77,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
         related_name="users",
-        verbose_name="sede asignada",
+        verbose_name="assigned venue",
     )
 
     # El campo activo controla el acceso: un usuario inactivo no puede
     # autenticarse, pero su historial de actividad se conserva íntegro.
-    is_active = models.BooleanField("activo", default=True)
-    is_staff = models.BooleanField("acceso al panel de administración", default=False)
+    is_active = models.BooleanField("active", default=True)
+    is_staff = models.BooleanField("staff status", default=False)
 
-    created_at = models.DateTimeField("fecha de creación", auto_now_add=True)
-    updated_at = models.DateTimeField("última modificación", auto_now=True)
+    created_at = models.DateTimeField("created at", auto_now_add=True)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     objects = UserManager()
 
@@ -94,8 +94,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["full_name"]
 
     class Meta:
-        verbose_name = "usuario"
-        verbose_name_plural = "usuarios"
+        verbose_name = "user"
+        verbose_name_plural = "users"
         ordering = ["full_name"]
 
     def __str__(self):

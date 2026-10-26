@@ -7,6 +7,7 @@ HU20: Agregar productos a un pedido.
 HU21: Enviar pedido a caja.
 """
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -20,7 +21,10 @@ from apps.inventory.services import InsufficientStock, discount_for_order, resto
 from apps.tables.models import TableStatus
 
 from .models import Order, OrderItem, OrderStatus
-from .serializers import AddOrderItemSerializer, OrderCreateSerializer, OrderSerializer
+from .serializers import (
+    AddOrderItemSerializer, OrderCreateSerializer, OrderSerializer,
+    PendingOrderFilterSerializer,
+)
 
 
 class CanTakeOrders(BasePermission):
@@ -39,6 +43,16 @@ class CanTakeOrders(BasePermission):
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
         return request.user.role in (Role.WAITER, Role.ADMIN)
+
+
+class CanViewCashierQueue(BasePermission):
+    message = "Only cashiers and administrators can view the payment queue."
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated
+            and request.user.role in (Role.ADMIN, Role.CASHIER)
+        )
 
 
 class OrderViewSet(
@@ -68,6 +82,8 @@ class OrderViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.request.method == "GET":
+            queryset = queryset.select_related("payment__invoice")
         if self.action in ("cancel", "add_item", "send_to_cashier"):
             queryset = queryset.select_for_update()
 
@@ -88,6 +104,22 @@ class OrderViewSet(
             queryset = queryset.filter(table_id=table_id)
 
         return queryset
+
+    @action(detail=False, methods=["get"], permission_classes=[CanViewCashierQueue])
+    def pending(self, request):
+        """HU22: cola de cobro, por sede y en orden de envio a caja."""
+        filters = PendingOrderFilterSerializer(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        queryset = self.queryset.all().filter(status=OrderStatus.IN_CASHIER)
+        if request.user.role == Role.CASHIER:
+            queryset = queryset.filter(venue=request.user.venue)
+        elif "venue" in filters.validated_data:
+            queryset = queryset.filter(venue=filters.validated_data["venue"])
+        queryset = queryset.order_by(F("sent_to_cashier_at").asc(nulls_last=True), "id")
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(OrderSerializer(page, many=True).data)
+        return Response(OrderSerializer(queryset, many=True).data)
 
     def create(self, request, *args, **kwargs):
         """Abre el pedido y marca la mesa como ocupada."""
@@ -112,10 +144,11 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Apertura del pedido {order.id} en la mesa '{table.identifier}' "
-                f"de la sede '{table.venue.name}'."
+                f"Opened order {order.id} at table '{table.identifier}' "
+                f"at venue '{table.venue.name}'."
             ),
             request=request,
         )
@@ -164,10 +197,11 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Cancelación del pedido {order.id} de la mesa "
-                f"'{table.identifier}'. El stock descontado fue reintegrado."
+                f"Cancelled order {order.id} at table "
+                f"'{table.identifier}'. Deducted stock was restored."
             ),
             request=request,
         )
@@ -239,10 +273,11 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Se agregaron {quantity} unidades de '{product.name}' al pedido "
-                f"{order.id}. Total del pedido: {order.total}."
+                f"Added {quantity} units of '{product.name}' to order "
+                f"{order.id}. Order total: {order.total}."
             ),
             request=request,
         )
@@ -291,10 +326,11 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Envío a caja del pedido {order.id} de la mesa "
-                f"'{order.table.identifier}'. Total: {order.total}."
+                f"Sent order {order.id} at table "
+                f"'{order.table.identifier}' to the cashier. Total: {order.total}."
             ),
             request=request,
         )

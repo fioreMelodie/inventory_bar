@@ -11,8 +11,8 @@ from django.db import models
 class TableStatus(models.TextChoices):
     """Estado operativo de una mesa."""
 
-    FREE = "FREE", "Libre"
-    OCCUPIED = "OCCUPIED", "Ocupada"
+    FREE = "FREE", "Free"
+    OCCUPIED = "OCCUPIED", "Occupied"
 
 
 class Table(models.Model):
@@ -22,26 +22,26 @@ class Table(models.Model):
         "locations.Venue",
         on_delete=models.PROTECT,
         related_name="tables",
-        verbose_name="sede",
+        verbose_name="venue",
     )
     # El identificador es único dentro de la sede: puede existir "Mesa 1" en
     # Galería y "Mesa 1" en Zona T.
-    identifier = models.CharField("identificador", max_length=40)
+    identifier = models.CharField("identifier", max_length=40)
 
     status = models.CharField(
-        "estado", max_length=20, choices=TableStatus.choices, default=TableStatus.FREE
+        "status", max_length=20, choices=TableStatus.choices, default=TableStatus.FREE
     )
 
     # Las mesas no se eliminan cuando tienen histórico de pedidos: se inactivan
     # para conservar la trazabilidad.
-    is_active = models.BooleanField("activa", default=True)
+    is_active = models.BooleanField("active", default=True)
 
-    created_at = models.DateTimeField("fecha de creación", auto_now_add=True)
-    updated_at = models.DateTimeField("última modificación", auto_now=True)
+    created_at = models.DateTimeField("created at", auto_now_add=True)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     class Meta:
-        verbose_name = "mesa"
-        verbose_name_plural = "mesas"
+        verbose_name = "table"
+        verbose_name_plural = "tables"
         ordering = ["venue__name", "identifier"]
         constraints = [
             models.UniqueConstraint(

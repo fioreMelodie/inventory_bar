@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CashPaymentDialog from '../components/CashPaymentDialog'
+import CardPaymentDialog from '../components/CardPaymentDialog'
+import { Banknote, CreditCard, ReceiptText } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { ordersService } from '../services/orders'
@@ -15,6 +18,10 @@ export default function OrderDetailPage() {
   const { orderId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const backToQueue = user.role === 'CASHIER' || location.state?.from === '/cashier/pending'
+  const backPath = backToQueue ? '/cashier/pending' : '/room'
+  const backLabel = backToQueue ? 'Back to pending orders' : 'Back to the room'
 
   const [order, setOrder] = useState(null)
   const [products, setProducts] = useState([])
@@ -31,6 +38,8 @@ export default function OrderDetailPage() {
   const [sendError, setSendError] = useState('')
   const [sending, setSending] = useState(false)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const canPay = order?.status === 'IN_CASHIER' && ['ADMIN', 'CASHIER'].includes(user.role)
 
   const isOpen = order?.status === 'OPEN'
   const canEdit = isOpen && (user.role === 'ADMIN' ||
@@ -43,6 +52,8 @@ export default function OrderDetailPage() {
 
   async function loadData() {
     setLoading(true)
+    setOrder(null)
+    setError('')
     try {
       const [orderData, productList] = await Promise.all([
         ordersService.retrieve(orderId),
@@ -128,8 +139,8 @@ export default function OrderDetailPage() {
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error || 'Order not found.'}
         </p>
-        <Link to="/room" className="mt-4 inline-block text-sm text-brand-700 underline">
-          Back to the room
+        <Link to={backPath} className="mt-4 inline-block text-sm text-brand-700 underline">
+          {backLabel}
         </Link>
       </main>
     )
@@ -137,8 +148,8 @@ export default function OrderDetailPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/room" className="text-sm text-brand-700 underline">
-        Back to the room
+      <Link to={backPath} className="text-sm text-brand-700 underline">
+        {backLabel}
       </Link>
 
       <header className="mt-4 flex flex-wrap items-start justify-between gap-3">
@@ -159,7 +170,7 @@ export default function OrderDetailPage() {
               : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
           }
         >
-            {{ OPEN: 'Open', IN_CASHIER: 'In cashier', CANCELLED: 'Cancelled' }[order.status]}
+            {{ OPEN: 'Open', IN_CASHIER: 'In cashier', CANCELLED: 'Cancelled', PAID: 'Paid' }[order.status]}
         </span>
       </header>
 
@@ -168,6 +179,18 @@ export default function OrderDetailPage() {
           {error}
         </p>
       )}
+
+      {canPay && <div className="order-payment-action">
+        <span className="status-pill amber">Awaiting payment</span>
+        <div className="payment-method-actions">
+          <button className="secondary-button" onClick={() => setPaying('cash')}><Banknote size={18} /> Pay in cash</button>
+          <button className="primary-button" onClick={() => setPaying('card')}><CreditCard size={18} /> Pay by card</button>
+        </div>
+      </div>}
+      {order.status === 'PAID' && order.receipt && <div className="order-payment-action">
+        <span className="status-pill green">Paid</span>
+        <Link to={'/invoices/' + order.receipt.id} className="primary-button"><ReceiptText size={17} /> View receipt</Link>
+      </div>}
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-5">
@@ -329,6 +352,8 @@ export default function OrderDetailPage() {
         <p className="mt-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
           {order.status === 'CANCELLED'
             ? 'This order was cancelled.'
+            : order.status === 'PAID'
+            ? 'This order has been paid and can no longer be modified.'
             : 'This order has been sent to the cashier and can no longer be modified.'}
         </p>
       )}
@@ -345,6 +370,14 @@ export default function OrderDetailPage() {
           onCancel={() => setConfirmingSend(false)}
         />
       )}
+      {paying === 'cash' && canPay && <CashPaymentDialog order={order}
+        onCancel={() => setPaying(false)}
+        onReload={() => { setPaying(false); loadData() }}
+        onPaid={invoice => { setPaying(false); navigate('/invoices/' + invoice.id, { replace: true }) }} />}
+      {paying === 'card' && canPay && <CardPaymentDialog order={order}
+        onCancel={() => setPaying(false)}
+        onReload={() => { setPaying(false); loadData() }}
+        onPaid={invoice => { setPaying(false); navigate('/invoices/' + invoice.id, { replace: true }) }} />}
       {confirmingCancel && (
         <ConfirmDialog
           title="Cancel this order?"

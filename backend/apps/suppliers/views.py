@@ -88,9 +88,9 @@ class SupplierViewSet(viewsets.ModelViewSet):
             entity="Supplier",
             entity_id=supplier.id,
             description=(
-                f"Asociación de productos al proveedor '{supplier.name}'. "
-                f"Asociados: {len(added)}; desvinculados: {len(removed)}; "
-                f"total actual: {len(selected_ids)}."
+                f"Linked products to supplier '{supplier.name}'. "
+                f"Linked: {len(added)}; unlinked: {len(removed)}; "
+                f"current total: {len(selected_ids)}."
             ),
             request=request,
         )
@@ -108,7 +108,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
             user=self.request.user,
             entity="Supplier",
             entity_id=supplier.id,
-            description=f"Registro del proveedor '{supplier.name}'.",
+            description=f"Created supplier '{supplier.name}'.",
             request=self.request,
         )
 
@@ -131,9 +131,9 @@ class SupplierViewSet(viewsets.ModelViewSet):
             entity="Supplier",
             entity_id=supplier.id,
             description=(
-                f"Edición del proveedor '{supplier.name}'. " + "; ".join(changes)
+                f"Updated supplier '{supplier.name}'. " + "; ".join(changes)
                 if changes
-                else f"Edición del proveedor '{supplier.name}' sin cambios efectivos."
+                else f"Updated supplier '{supplier.name}' with no effective changes."
             ),
             request=self.request,
         )
@@ -147,7 +147,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
             user=self.request.user,
             entity="Supplier",
             entity_id=instance.id,
-            description=f"Eliminación del proveedor '{instance.name}'.",
+            description=f"Deleted supplier '{instance.name}'.",
             request=self.request,
         )
         instance.delete()

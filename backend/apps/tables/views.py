@@ -73,9 +73,10 @@ class TableViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Creación de la mesa '{table.identifier}' en la sede "
+                f"Created table '{table.identifier}' at venue "
                 f"'{table.venue.name}'."
             ),
             request=self.request,
@@ -92,9 +93,10 @@ class TableViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Edición de la mesa en la sede '{table.venue.name}'. "
+                f"Updated table at venue '{table.venue.name}'. "
                 f"identifier: '{previous_identifier}' -> '{table.identifier}'."
             ),
             request=self.request,
@@ -130,9 +132,10 @@ class TableViewSet(
             username=request.user.username,
             user=request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Inactivación de la mesa '{table.identifier}' en la sede "
+                f"Deactivated table '{table.identifier}' at venue "
                 f"'{table.venue.name}'."
             ),
             request=request,

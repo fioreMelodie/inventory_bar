@@ -74,11 +74,12 @@ class VenueViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Venue",
+            venue=venue,
             entity_id=venue.id,
             description=(
-                f"Edición de la sede '{venue.name}'. " + "; ".join(cambios)
+                f"Updated venue '{venue.name}'. " + "; ".join(cambios)
                 if cambios
-                else f"Edición de la sede '{venue.name}' sin cambios efectivos."
+                else f"Updated venue '{venue.name}' with no effective changes."
             ),
             request=self.request,
         )
@@ -116,7 +117,8 @@ class VenueViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Venue",
+            venue=venue,
             entity_id=venue.id,
-            description=f"Creación de la sede '{venue.name}'.",
+            description=f"Created venue '{venue.name}'.",
             request=self.request,
         )

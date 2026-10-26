@@ -97,6 +97,15 @@ class ProductSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Sale price must be greater than zero.")
         return value
 
+    def validate(self, attrs):
+        purchase_price = attrs.get("purchase_price", getattr(self.instance, "purchase_price", None))
+        sale_price = attrs.get("sale_price", getattr(self.instance, "sale_price", None))
+        if purchase_price is not None and sale_price is not None and sale_price < purchase_price:
+            raise serializers.ValidationError(
+                {"sale_price": "Sale price cannot be lower than purchase price."}
+            )
+        return attrs
+
     def to_representation(self, instance):
         """Oculta el valor de compra a los roles que no deben verlo."""
         data = super().to_representation(instance)

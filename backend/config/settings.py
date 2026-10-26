@@ -59,6 +59,7 @@ LOCAL_APPS = [
     "apps.inventory",
     "apps.tables",
     "apps.orders",
+    "apps.payments",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -142,8 +143,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # --------------------------------------------------------------------------
 # Internacionalización
 # --------------------------------------------------------------------------
-# El backend opera en español; la interfaz de usuario (frontend) está en inglés.
-LANGUAGE_CODE = "es-co"
+# Los mensajes de la API y ambos paneles se muestran en ingles.
+LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Bogota"
 USE_I18N = True
 USE_TZ = True

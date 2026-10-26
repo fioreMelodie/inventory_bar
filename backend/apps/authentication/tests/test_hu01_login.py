@@ -89,7 +89,7 @@ class LoginTests(APITestCase):
         evento = AuditEvent.objects.filter(event_type=EventType.LOGIN_FAILED).first()
         self.assertIsNotNone(evento)
         self.assertEqual(evento.username, "mesero1")
-        self.assertIn("Contraseña incorrecta", evento.description)
+        self.assertIn("Incorrect password", evento.description)
 
     def test_bloqueo_tras_tres_intentos_fallidos_consecutivos(self):
         """Tras 3 intentos fallidos el acceso se bloquea 5 minutos."""

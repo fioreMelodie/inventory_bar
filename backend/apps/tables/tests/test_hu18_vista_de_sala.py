@@ -107,6 +107,7 @@ class RoomViewTests(APITestCase):
         fila = self.row(response, "Mesa 2")
         self.assertIsNone(fila["occupied_minutes"])
         self.assertIsNone(fila["active_order"])
+        self.assertIsNone(fila["active_order_status"])
 
     def test_la_mesa_ocupada_expone_su_pedido_activo(self):
         """El Cajero puede consultar el pedido activo de una mesa ocupada."""
@@ -116,6 +117,34 @@ class RoomViewTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(self.row(response, "Mesa 1")["active_order"], order.id)
+        self.assertEqual(self.row(response, "Mesa 1")["active_order_status"], OrderStatus.OPEN)
+
+    def test_pedido_en_caja_se_distingue_sin_cambiar_estado_de_la_mesa(self):
+        order = self.occupy(self.mesa1, minutes_ago=25)
+        Order.objects.filter(pk=order.pk).update(status=OrderStatus.IN_CASHIER)
+        self.login(self.cajero)
+
+        response = self.client.get(self.url)
+
+        fila = self.row(response, "Mesa 1")
+        self.assertEqual(fila["status"], TableStatus.OCCUPIED)
+        self.assertEqual(fila["active_order"], order.pk)
+        self.assertEqual(fila["active_order_status"], OrderStatus.IN_CASHIER)
+        self.assertEqual(fila["occupied_minutes"], 25)
+
+    def test_pedido_cancelado_no_aparece_como_pendiente_de_pago(self):
+        order = self.occupy(self.mesa1)
+        Order.objects.filter(pk=order.pk).update(status=OrderStatus.CANCELLED)
+        self.mesa1.status = TableStatus.FREE
+        self.mesa1.save(update_fields=["status"])
+        self.login(self.cajero)
+
+        response = self.client.get(self.url)
+
+        fila = self.row(response, "Mesa 1")
+        self.assertEqual(fila["status"], TableStatus.FREE)
+        self.assertIsNone(fila["active_order"])
+        self.assertIsNone(fila["active_order_status"])
 
     def test_el_mesero_solo_ve_las_mesas_de_su_sede(self):
         """El alcance por sede aplica a la vista de sala."""

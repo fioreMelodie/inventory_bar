@@ -2,6 +2,12 @@ import api, { listAll } from './api'
 
 /** Módulo 8 - Gestión de Pedidos. */
 export const ordersService = {
+  async pending({ venue, background = false } = {}) {
+    return listAll('/orders/pending/', {
+      params: venue ? { venue } : undefined,
+      headers: background ? { 'X-Session-Activity': 'background' } : undefined,
+    })
+  },
   /** Lista los pedidos de la sede, opcionalmente filtrados por estado. */
   async list({ venue, status, table, background = false } = {}) {
     const params = {}

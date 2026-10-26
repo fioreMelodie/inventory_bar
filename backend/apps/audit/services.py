@@ -11,7 +11,7 @@ def get_client_ip(request):
 
 
 def record_event(*, event_type, username, user=None, entity="", entity_id="",
-                 description="", request=None):
+                 description="", request=None, venue=None):
     """
     Crea un registro de auditoría.
 
@@ -25,5 +25,8 @@ def record_event(*, event_type, username, user=None, entity="", entity_id="",
         entity=entity,
         entity_id=str(entity_id) if entity_id else "",
         description=description,
+        venue=venue,
+        venue_name=venue.name if venue is not None else "",
+        venue_recorded=True,
         ip_address=get_client_ip(request) if request is not None else None,
     )

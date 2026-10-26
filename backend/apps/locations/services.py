@@ -51,16 +51,17 @@ def deactivate_venue(venue, *, performed_by, request=None):
         user.venue = None
         user.save(update_fields=["venue", "updated_at"])
 
-    description = f"Inactivación de la sede '{venue.name}'."
+    description = f"Deactivated venue '{venue.name}'."
     if affected_users:
         usernames = ", ".join(user.username for user in affected_users)
-        description += f" Usuarios que quedan sin sede asignada: {usernames}."
+        description += f" Users left without an assigned venue: {usernames}."
 
     record_event(
         event_type=EventType.VENUE_DEACTIVATED,
         username=performed_by.username,
         user=performed_by,
         entity="Venue",
+        venue=venue,
         entity_id=venue.id,
         description=description,
         request=request,

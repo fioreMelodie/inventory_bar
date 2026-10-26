@@ -48,10 +48,11 @@ def register_entry(*, venue, product, quantity, performed_by, request=None):
         username=performed_by.username,
         user=performed_by,
         entity="Stock",
+        venue=stock.venue,
         entity_id=stock.id,
         description=(
-            f"Entrada de {quantity} unidades de '{product.name}' en la sede "
-            f"'{venue.name}'. Stock resultante: {stock.quantity}."
+            f"Stock entry of {quantity} units of '{product.name}' at venue "
+            f"'{venue.name}'. Resulting stock: {stock.quantity}."
         ),
         request=request,
     )
@@ -110,11 +111,12 @@ def discount_for_order(*, order, product, quantity, performed_by, request=None):
         username=performed_by.username,
         user=performed_by,
         entity="Stock",
+        venue=stock.venue,
         entity_id=stock.id,
         description=(
-            f"Descuento de {quantity} unidades de '{product.name}' por el pedido "
-            f"{order.id} en la sede '{order.venue.name}'. "
-            f"Stock resultante: {stock.quantity}."
+            f"Deducted {quantity} units of '{product.name}' for order "
+            f"{order.id} at venue '{order.venue.name}'. "
+            f"Resulting stock: {stock.quantity}."
         ),
         request=request,
     )
@@ -151,11 +153,12 @@ def restore_for_order(*, order, performed_by, request=None):
             username=performed_by.username,
             user=performed_by,
             entity="Stock",
+            venue=stock.venue,
             entity_id=stock.id,
             description=(
-                f"Reintegro de {item.quantity} unidades de '{item.product.name}' "
-                f"por la cancelación del pedido {order.id} en la sede "
-                f"'{order.venue.name}'. Stock resultante: {stock.quantity}."
+                f"Restored {item.quantity} units of '{item.product.name}' "
+                f"for cancellation of order {order.id} at venue "
+                f"'{order.venue.name}'. Resulting stock: {stock.quantity}."
             ),
             request=request,
         )

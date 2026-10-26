@@ -19,7 +19,9 @@ Desarrollado por **DevSolutions S.A.S.** bajo metodología **Scrum**.
 | Control de versiones | Git · GitHub                            |
 
 > **Importante:** toda la interfaz de usuario está **en inglés** (requisito no funcional de la
-> propuesta comercial). La documentación y los comentarios del código están en español.
+> propuesta comercial), incluidos el panel Django, los mensajes de validación y los nuevos
+> eventos de auditoría. Los nombres propios y la auditoría histórica se conservan.
+> La documentación y los comentarios del código están en español.
 
 ---
 
@@ -55,6 +57,11 @@ python manage.py runserver
 ```
 
 API disponible en `http://localhost:8000/api/`
+
+Panel de administracion de Django: `http://localhost:8000/django-admin/`.
+Las rutas `/admin`, `/admin/users`, `/admin/venues`, `/admin/suppliers` y
+`/admin/tables` pertenecen a React. Con Docker, el panel de Django se abre en
+`/django-admin/` sobre el mismo host y puerto de la aplicacion.
 
 ### Frontend
 

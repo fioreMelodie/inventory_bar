@@ -164,7 +164,7 @@ class UpdateUserTests(APITestCase):
         self.client.patch(self.url, {"password": "NuevaClave2026*"}, format="json")
 
         evento = AuditEvent.objects.filter(event_type=EventType.USER_UPDATED).first()
-        self.assertIn("password: actualizada", evento.description)
+        self.assertIn("password: updated", evento.description)
         self.assertNotIn("NuevaClave2026*", evento.description)
 
     def test_un_cajero_no_puede_editar_usuarios(self):

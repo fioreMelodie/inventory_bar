@@ -73,16 +73,17 @@ class UserViewSet(
 
     def perform_create(self, serializer):
         user = serializer.save()
-        sede = user.venue.name if user.venue else "sin sede asignada"
+        sede = user.venue.name if user.venue else "no venue assigned"
         record_event(
             event_type=EventType.USER_CREATED,
             username=self.request.user.username,
             user=self.request.user,
             entity="User",
+            venue=user.venue,
             entity_id=user.id,
             description=(
-                f"Creación del usuario '{user.username}' con rol "
-                f"{user.get_role_display()} y sede {sede}."
+                f"Created user '{user.username}' with role "
+                f"{user.get_role_display()} and venue {sede}."
             ),
             request=self.request,
         )
@@ -111,18 +112,19 @@ class UserViewSet(
         ]
         if password_changed:
             # Nunca se registra el valor de la contraseña, solo el hecho.
-            changes.append("password: actualizada")
+            changes.append("password: updated")
 
         record_event(
             event_type=EventType.USER_UPDATED,
             username=self.request.user.username,
             user=self.request.user,
             entity="User",
+            venue=user.venue,
             entity_id=user.id,
             description=(
-                f"Edición del usuario '{user.username}'. " + "; ".join(changes)
+                f"Updated user '{user.username}'. " + "; ".join(changes)
                 if changes
-                else f"Edición del usuario '{user.username}' sin cambios efectivos."
+                else f"Updated user '{user.username}' with no effective changes."
             ),
             request=self.request,
         )
@@ -166,10 +168,11 @@ class UserViewSet(
             username=request.user.username,
             user=request.user,
             entity="User",
+            venue=user.venue,
             entity_id=user.id,
             description=(
-                f"Inactivación del usuario '{user.username}'. "
-                f"Sesiones activas invalidadas: {len(closed)}."
+                f"Deactivated user '{user.username}'. "
+                f"Active sessions revoked: {len(closed)}."
             ),
             request=request,
         )
@@ -198,8 +201,9 @@ class UserViewSet(
             username=request.user.username,
             user=request.user,
             entity="User",
+            venue=user.venue,
             entity_id=user.id,
-            description=f"Reactivación del usuario '{user.username}'.",
+            description=f"Reactivated user '{user.username}'.",
             request=request,
         )
 
