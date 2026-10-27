@@ -20,6 +20,7 @@ function startOfMonth() {
 /**
  * HU27 - Reporte de ventas del Administrador (todas las sedes).
  * HU28 - Reporte de ventas del Cajero (sede propia).
+ * HU29 - Combinación de filtros sobre el reporte.
  */
 export default function ReportsPage() {
   const { user } = useAuth()
@@ -101,6 +102,11 @@ export default function ReportsPage() {
         onSubmit={generate}
         className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       >
+        <p className="mb-4 text-xs text-slate-500">
+          The date range is required. Every other filter is optional and they combine:
+          each one narrows the results further.
+        </p>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <label htmlFor="date-from" className="block text-xs font-medium text-slate-600">
