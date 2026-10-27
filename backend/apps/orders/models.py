@@ -58,6 +58,11 @@ class Order(models.Model):
         verbose_name = "pedido"
         verbose_name_plural = "pedidos"
         ordering = ["-opened_at"]
+        indexes = [
+            # El reporte de ventas filtra por estado y fecha de pago; sin este
+            # índice la consulta recorrería toda la tabla de pedidos (HU29).
+            models.Index(fields=["status", "paid_at"], name="order_status_paid_idx"),
+        ]
         constraints = [
             # Una mesa ocupada solo puede tener un pedido activo a la vez.
             models.UniqueConstraint(
