@@ -15,18 +15,18 @@ class Product(models.Model):
     """Producto del catálogo global."""
 
     name = models.CharField(
-        "nombre",
+        "name",
         max_length=150,
         unique=True,
-        help_text="Debe ser único en el catálogo.",
+        help_text="Must be unique in the catalog.",
     )
-    product_type = models.CharField("tipo", max_length=80)
-    category = models.CharField("categoría", max_length=80)
+    product_type = models.CharField("type", max_length=80)
+    category = models.CharField("category", max_length=80)
 
     # Los valores se manejan en pesos colombianos sin decimales, en números
     # enteros positivos.
-    purchase_price = models.PositiveIntegerField("valor de compra")
-    sale_price = models.PositiveIntegerField("valor de venta")
+    purchase_price = models.PositiveIntegerField("purchase price")
+    sale_price = models.PositiveIntegerField("sale price")
 
     # Un producto tiene un único proveedor principal; un proveedor puede
     # suministrar varios productos. La relación es informativa: no genera
@@ -37,23 +37,23 @@ class Product(models.Model):
         null=True,
         blank=True,
         related_name="products",
-        verbose_name="proveedor",
+        verbose_name="supplier",
     )
 
     image = models.ImageField(
-        "imagen", upload_to="products/", blank=True, null=True
+        "image", upload_to="products/", blank=True, null=True
     )
 
     # Un producto inactivo se retira del catálogo sin eliminarlo: no aparece en
     # pedidos ni en el catálogo de meseros, pero su histórico se conserva.
-    is_active = models.BooleanField("activo", default=True)
+    is_active = models.BooleanField("active", default=True)
 
-    created_at = models.DateTimeField("fecha de creación", auto_now_add=True)
-    updated_at = models.DateTimeField("última modificación", auto_now=True)
+    created_at = models.DateTimeField("created at", auto_now_add=True)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     class Meta:
-        verbose_name = "producto"
-        verbose_name_plural = "productos"
+        verbose_name = "product"
+        verbose_name_plural = "products"
         ordering = ["name"]
         indexes = [
             models.Index(fields=["product_type"]),

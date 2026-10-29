@@ -93,6 +93,7 @@ class RoomTableSerializer(serializers.ModelSerializer):
     """
 
     active_order = serializers.SerializerMethodField()
+    active_order_status = serializers.SerializerMethodField()
     occupied_since = serializers.SerializerMethodField()
     occupied_minutes = serializers.SerializerMethodField()
 
@@ -104,6 +105,7 @@ class RoomTableSerializer(serializers.ModelSerializer):
             "status",
             "venue",
             "active_order",
+            "active_order_status",
             "occupied_since",
             "occupied_minutes",
         )
@@ -112,6 +114,10 @@ class RoomTableSerializer(serializers.ModelSerializer):
     def get_active_order(self, table):
         order = self._active_order(table)
         return order.id if order else None
+
+    def get_active_order_status(self, table):
+        order = self._active_order(table)
+        return order.status if order else None
 
     def get_occupied_since(self, table):
         order = self._active_order(table)

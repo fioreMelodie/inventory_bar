@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Clock3, Table2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { ordersService } from '../services/orders'
@@ -49,7 +50,7 @@ export default function RoomPage() {
     if (isAdmin) loadVenues()
     loadRoom()
 
-    const intervalId = setInterval(loadRoom, REFRESH_INTERVAL_MS)
+    const intervalId = setInterval(() => loadRoom(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -69,10 +70,11 @@ export default function RoomPage() {
     }
   }
 
-  async function loadRoom() {
+  async function loadRoom(background = false) {
     try {
       const data = await tablesService.room({
         venue: isAdmin && venueRef.current ? venueRef.current : undefined,
+        background,
       })
       setTables(data.results)
       setVenueName(data.venue_name)
@@ -108,11 +110,6 @@ export default function RoomPage() {
           <h1 className="text-xl font-semibold text-slate-900">
             Room{venueName ? ' - ' + venueName : ''}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {canTakeOrders
-              ? 'Pick a free table to open a new order. The view refreshes on its own.'
-              : 'Current status of the tables. The view refreshes on its own.'}
-          </p>
         </div>
 
         {isAdmin && venues.length > 0 && (
@@ -136,6 +133,13 @@ export default function RoomPage() {
         )}
       </header>
 
+      {!loading && !error && <div className="room-summary" aria-label="Room summary">
+        <span><strong>{tables.length}</strong> Total tables</span>
+        <span><strong>{tables.filter(table => table.status === 'FREE').length}</strong> Free</span>
+        <span><strong>{tables.filter(table => table.status === 'OCCUPIED').length}</strong> Occupied</span>
+        <span><strong>{tables.filter(table => table.active_order_status === 'IN_CASHIER').length}</strong> Pending payment</span>
+      </div>}
+
       {error && (
         <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
@@ -150,30 +154,34 @@ export default function RoomPage() {
         </p>
       )}
 
-      <ul className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="room-grid mt-6 grid gap-4">
         {!loading &&
           tables.map((table) => {
             const isFree = table.status === 'FREE'
+            const isPendingPayment = !isFree && table.active_order_status === 'IN_CASHIER'
             return (
               <li
                 key={table.id}
                 className={
-                  isFree
-                    ? 'rounded-xl border border-emerald-200 bg-emerald-50 p-4'
-                    : 'rounded-xl border border-amber-200 bg-amber-50 p-4'
+                  'room-tile ' + (isFree ? '' : 'occupied')
                 }
               >
                 <p className="text-sm font-semibold text-slate-900">{table.identifier}</p>
-                <p
-                  className={
-                    isFree ? 'mt-1 text-xs text-emerald-700' : 'mt-1 text-xs text-amber-800'
-                  }
-                >
-                  {isFree ? 'Free' : 'Occupied'}
-                </p>
+                <div className="mt-1 flex min-h-6 flex-wrap items-center gap-2">
+                  <p className={isFree ? 'text-xs text-emerald-700' : 'text-xs text-amber-800'}>
+                    {isFree ? 'Free' : 'Occupied'}
+                  </p>
+                  {isPendingPayment && (
+                    <span className="inline-block max-w-full rounded border border-sky-200 bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900">
+                      Pending payment
+                    </span>
+                  )}
+                </div>
+                <Table2 className="table-symbol" size={46} strokeWidth={1.2} aria-hidden="true" />
 
                 {!isFree && (
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mb-3 flex items-center gap-1 text-xs text-slate-600">
+                    <Clock3 size={12} />
                     Open for {formatElapsed(table.occupied_minutes)}
                   </p>
                 )}

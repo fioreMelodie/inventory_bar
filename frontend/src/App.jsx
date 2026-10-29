@@ -2,15 +2,15 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import AuditPage from './pages/AuditPage'
-import BillingPage from './pages/BillingPage'
-import CashierPage from './pages/CashierPage'
-import InventoryPage from './pages/InventoryPage'
+import PendingOrdersPage from './pages/PendingOrdersPage'
 import InvoicePage from './pages/InvoicePage'
+import InvoicesPage from './pages/InvoicesPage'
+import SalesReportPage from './pages/SalesReportPage'
+import AuditEventsPage from './pages/AuditEventsPage'
+import LoginPage from './pages/LoginPage'
+import InventoryPage from './pages/InventoryPage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import ProductsPage from './pages/ProductsPage'
-import ReportsPage from './pages/ReportsPage'
 import RoomPage from './pages/RoomPage'
 import SuppliersPage from './pages/SuppliersPage'
 import TablesPage from './pages/TablesPage'
@@ -25,6 +25,12 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        <Route path="/audit/events" element={<ProtectedRoute roles={['ADMIN']}><AuditEventsPage /></ProtectedRoute>} />
+        <Route path="/reports/my-sales" element={<ProtectedRoute roles={['CASHIER']}><SalesReportPage /></ProtectedRoute>} />
+        <Route path="/reports/sales" element={<ProtectedRoute roles={['ADMIN']}><SalesReportPage /></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><InvoicesPage /></ProtectedRoute>} />
+        <Route path="/invoices/:invoiceId" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><InvoicePage /></ProtectedRoute>} />
+        <Route path="/cashier/pending" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><PendingOrdersPage /></ProtectedRoute>} />
         <Route path="/login" element={<LoginPage />} />
 
         <Route
@@ -76,51 +82,6 @@ export default function App() {
           element={
             <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
               <InventoryPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/cashier/orders"
-          element={
-            <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
-              <CashierPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/audit"
-          element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <AuditPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute roles={['ADMIN', 'CASHIER']}>
-              <ReportsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
-              <BillingPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/billing/invoices/:invoiceId"
-          element={
-            <ProtectedRoute roles={['CASHIER', 'ADMIN']}>
-              <InvoicePage />
             </ProtectedRoute>
           }
         />

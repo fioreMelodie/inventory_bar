@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowRight, Coffee, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { HOME_ROUTE_BY_ROLE, useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [retryAfter, setRetryAfter] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // Cuenta regresiva del bloqueo por intentos fallidos.
   useEffect(() => {
@@ -55,22 +57,19 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-slate-100 px-4 py-10">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Bar Inventory</h1>
-          <p className="mt-1 text-sm text-slate-500">Cafe Colombia Bar</p>
+    <main className="login-screen">
+      <div className="login-panel">
+        <div className="brand-lockup">
+          <span className="brand-mark"><Coffee size={23} /></span>
+          <span><strong>Bar Inventory</strong><small>Cafe Colombia Bar</small></span>
         </div>
 
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="login-form"
         >
-          <h2 className="text-base font-medium text-slate-900">Sign in</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Enter your credentials to access the system.
-          </p>
+          <h1>Sign in</h1>
 
           <div className="mt-6">
             <label htmlFor="username" className="block text-sm font-medium text-slate-700">
@@ -93,16 +92,19 @@ export default function LoginPage() {
             <label htmlFor="password" className="block text-sm font-medium text-slate-700">
               Password
             </label>
-            <input
+            <div className="password-field"><input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               disabled={isLocked || submitting}
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-50"
             />
+            <button type="button" className="icon-button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} disabled={isLocked || submitting}>
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button></div>
           </div>
 
           {sessionNotice && !error && (
@@ -128,13 +130,13 @@ export default function LoginPage() {
             disabled={isLocked || submitting}
             className="mt-6 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
+            {submitting ? <LoaderCircle size={17} className="spin" /> : null}
             {submitting ? 'Signing in…' : 'Sign in'}
+            {!submitting && <ArrowRight size={17} />}
           </button>
 
-          <p className="mt-4 text-center text-xs text-slate-400">
-            Accounts are created by the administrator. Self-registration is not available.
-          </p>
         </form>
+        <span className="login-caption">Cafe Colombia Bar · Staff access</span>
       </div>
     </main>
   )

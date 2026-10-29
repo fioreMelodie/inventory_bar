@@ -1,11 +1,10 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 5 - Gestión de Proveedores. */
 export const suppliersService = {
   /** Lista el directorio de proveedores. */
   async list() {
-    const { data } = await api.get('/suppliers/')
-    return data.results ?? data
+    return listAll('/suppliers/')
   },
 
   /** Registra un proveedor (HU12). */

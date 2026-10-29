@@ -19,7 +19,9 @@ Desarrollado por **DevSolutions S.A.S.** bajo metodología **Scrum**.
 | Control de versiones | Git · GitHub                            |
 
 > **Importante:** toda la interfaz de usuario está **en inglés** (requisito no funcional de la
-> propuesta comercial). La documentación y los comentarios del código están en español.
+> propuesta comercial), incluidos el panel Django, los mensajes de validación y los nuevos
+> eventos de auditoría. Los nombres propios y la auditoría histórica se conservan.
+> La documentación y los comentarios del código están en español.
 
 ---
 
@@ -56,21 +58,10 @@ python manage.py runserver
 
 API disponible en `http://localhost:8000/api/`
 
-#### Datos de demostración
-
-Para trabajar con información realista en lugar de una base vacía:
-
-```bash
-python manage.py seed_demo
-```
-
-Carga las tres sedes, usuarios de los tres roles, proveedores, catálogo,
-existencias, mesas y pedidos en distintos estados. Todas las cuentas de
-demostración usan la contraseña `Cafe2026*Bar`.
-
-El comando no elimina ni duplica nada: si un registro ya existe, lo reutiliza,
-así que se puede ejecutar las veces que haga falta. Con `--sin-pedidos` carga
-solo el maestro.
+Panel de administracion de Django: `http://localhost:8000/django-admin/`.
+Las rutas `/admin`, `/admin/users`, `/admin/venues`, `/admin/suppliers` y
+`/admin/tables` pertenecen a React. Con Docker, el panel de Django se abre en
+`/django-admin/` sobre el mismo host y puerto de la aplicacion.
 
 ### Frontend
 
@@ -111,3 +102,5 @@ main
 | Mesero        | Su sede asignada. Pedidos por mesa.                               |
 
 No existe autoregistro: todas las cuentas las crea el Administrador.
+
+Prueba de despliegue automatico.

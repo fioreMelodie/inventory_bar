@@ -12,20 +12,20 @@ class Supplier(models.Model):
     """Proveedor que suministra productos del catálogo."""
 
     name = models.CharField(
-        "nombre",
+        "name",
         max_length=150,
         unique=True,
-        help_text="Debe ser único en el directorio de proveedores.",
+        help_text="Must be unique in the supplier directory.",
     )
-    phone = models.CharField("teléfono de contacto", max_length=40, blank=True)
-    email = models.EmailField("correo electrónico", max_length=254, blank=True)
+    phone = models.CharField("contact phone", max_length=40, blank=True)
+    email = models.EmailField("email address", max_length=254, blank=True)
 
-    created_at = models.DateTimeField("fecha de creación", auto_now_add=True)
-    updated_at = models.DateTimeField("última modificación", auto_now=True)
+    created_at = models.DateTimeField("created at", auto_now_add=True)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     class Meta:
-        verbose_name = "proveedor"
-        verbose_name_plural = "proveedores"
+        verbose_name = "supplier"
+        verbose_name_plural = "suppliers"
         ordering = ["name"]
 
     def __str__(self):

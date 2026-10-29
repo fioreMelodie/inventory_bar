@@ -50,7 +50,6 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "apps.core",
     "apps.audit",
     "apps.locations",
     "apps.accounts",
@@ -60,8 +59,7 @@ LOCAL_APPS = [
     "apps.inventory",
     "apps.tables",
     "apps.orders",
-    "apps.billing",
-    "apps.reports",
+    "apps.payments",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -125,7 +123,6 @@ if os.getenv("DB_ENGINE", "sqlite") == "mysql":
             },
         }
     }
-
     # Bases administradas (Aiven, Railway externo) exigen conexión cifrada.
     if env_bool("DB_SSL", False):
         DATABASES["default"]["OPTIONS"]["ssl"] = {"check_hostname": False}
@@ -133,7 +130,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": os.getenv("DB_SQLITE_PATH", BASE_DIR / "db.sqlite3"),
         }
     }
 
@@ -151,8 +148,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # --------------------------------------------------------------------------
 # Internacionalización
 # --------------------------------------------------------------------------
-# El backend opera en español; la interfaz de usuario (frontend) está en inglés.
-LANGUAGE_CODE = "es-co"
+# Los mensajes de la API y ambos paneles se muestran en ingles.
+LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Bogota"
 USE_I18N = True
 USE_TZ = True
@@ -164,12 +161,6 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 # En producción (Railway) apunta al volumen persistente, p. ej. MEDIA_ROOT=/app/media
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media"))
-
-# La regla "un pedido OPEN por mesa" se crea en MySQL con la migración
-# orders.0006 (índice funcional), porque MySQL no admite índices parciales y
-# Django omite el UniqueConstraint condicional sin avisar. Por eso se silencia
-# el aviso correspondiente.
-SILENCED_SYSTEM_CHECKS = ["models.W036"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -212,6 +203,10 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = env_list("FRONTEND_URL", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
 
+# La regla "un pedido OPEN por mesa" se crea en MySQL con la migración
+# orders.0003 (índice funcional), por eso se silencia este aviso.
+SILENCED_SYSTEM_CHECKS = ["models.W036"]
+
 # --------------------------------------------------------------------------
 # Producción detrás de un proxy HTTPS (Railway / Vercel)
 # --------------------------------------------------------------------------
@@ -221,9 +216,7 @@ CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 # sirve los estáticos del admin directamente desde las apps.
 if os.getenv("VERCEL"):
     WHITENOISE_USE_FINDERS = True
-
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

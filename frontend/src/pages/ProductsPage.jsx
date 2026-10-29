@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Package, Plus, X, Pencil } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { formatPrice, productsService } from '../services/products'
@@ -12,6 +13,9 @@ const EMPTY_FORM = {
   purchase_price: '',
   sale_price: '',
 }
+
+const DEFAULT_TYPES = ['Beverage', 'Food']
+const DEFAULT_CATEGORIES = ['Beer', 'Liquor', 'Soft Drink', 'Water', 'Coffee', 'Snacks']
 
 /**
  * HU09 - Crear producto en el catálogo.
@@ -45,6 +49,10 @@ export default function ProductsPage() {
 
   const types = [...new Set(products.map((product) => product.product_type))].sort()
   const categories = [...new Set(products.map((product) => product.category))].sort()
+  const formTypes = [...new Set([...DEFAULT_TYPES, ...types, form.product_type].filter(Boolean))].sort()
+  const formCategories = [...new Set([
+    ...DEFAULT_CATEGORIES, ...categories, form.category,
+  ].filter(Boolean))].sort()
 
   const visibleProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -138,6 +146,11 @@ export default function ProductsPage() {
       sale_price: Number(form.sale_price),
     }
 
+    if (payload.sale_price < payload.purchase_price) {
+      setFormError('Sale price cannot be lower than purchase price.')
+      return
+    }
+
     setSaving(true)
     try {
       if (isEditing) {
@@ -168,18 +181,15 @@ export default function ProductsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Catalog</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            One shared catalog for every venue. Prices are the same everywhere; stock is
-            managed per venue.
-          </p>
         </div>
 
         {isAdmin && (
           <button
             type="button"
             onClick={showForm ? () => setShowForm(false) : openCreateForm}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+            className="primary-button"
           >
+            {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? 'Cancel' : 'New product'}
           </button>
         )}
@@ -223,27 +233,32 @@ export default function ProductsPage() {
               <label htmlFor="product-type" className="block text-sm font-medium text-slate-700">
                 Type <span className="text-red-500">*</span>
               </label>
-              <input
+              <select
                 id="product-type"
-                type="text"
-                placeholder="Beer, spirits, snack…"
                 value={form.product_type}
                 onChange={(event) => setForm({ ...form, product_type: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              />
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              >
+                <option value="">Select a type</option>
+                {formTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
             </div>
 
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-slate-700">
                 Category <span className="text-red-500">*</span>
               </label>
-              <input
+              <select
                 id="category"
-                type="text"
                 value={form.category}
                 onChange={(event) => setForm({ ...form, category: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              />
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              >
+                <option value="">Select a category</option>
+                {formCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -456,7 +471,7 @@ export default function ProductsPage() {
                             aria-hidden="true"
                             className="flex h-9 w-9 items-center justify-center rounded bg-slate-100 text-slate-400"
                           >
-                            &#9634;
+                            <Package size={18} strokeWidth={1.4} />
                           </span>
                         )}
                         <span className="font-medium text-slate-900">{product.name}</span>
@@ -488,9 +503,11 @@ export default function ProductsPage() {
                           <button
                             type="button"
                             onClick={() => openEditForm(product)}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                            className="icon-button"
+                            aria-label={'Edit ' + product.name}
+                            title={'Edit ' + product.name}
                           >
-                            Edit
+                            <Pencil size={16} />
                           </button>
                           <button
                             type="button"

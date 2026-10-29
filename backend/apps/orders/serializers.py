@@ -3,9 +3,16 @@ from rest_framework import serializers
 
 from apps.accounts.models import Role
 from apps.catalog.models import Product
+from apps.locations.models import Venue
 from apps.tables.models import Table, TableStatus
 
 from .models import Order, OrderItem
+
+
+class PendingOrderFilterSerializer(serializers.Serializer):
+    venue = serializers.PrimaryKeyRelatedField(
+        queryset=Venue.objects.all(), required=False,
+    )
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -29,6 +36,15 @@ class OrderSerializer(serializers.ModelSerializer):
     venue_name = serializers.CharField(source="venue.name", read_only=True)
     waiter_name = serializers.CharField(source="waiter.full_name", read_only=True)
     status_label = serializers.CharField(source="get_status_display", read_only=True)
+    receipt = serializers.SerializerMethodField()
+
+    def get_receipt(self, order):
+        request = self.context.get("request")
+        if order.status != "PAID" or not request or request.user.role not in (Role.ADMIN, Role.CASHIER):
+            return None
+        payment = getattr(order, "payment", None)
+        invoice = getattr(payment, "invoice", None) if payment else None
+        return {"id": invoice.pk, "number": invoice.number} if invoice else None
 
     class Meta:
         model = Order
@@ -46,7 +62,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
             "opened_at",
             "sent_to_cashier_at",
-            "paid_at",
+            "receipt",
         )
         read_only_fields = fields
 
@@ -69,6 +85,9 @@ class OrderCreateSerializer(serializers.Serializer):
 
     def validate_table(self, value):
         user = self.context["request"].user
+
+        if not value.venue.is_active:
+            raise serializers.ValidationError("This venue is inactive and cannot take new orders.")
 
         # El Mesero solo opera las mesas de su sede asignada.
         if user.role != Role.ADMIN and value.venue != user.venue:

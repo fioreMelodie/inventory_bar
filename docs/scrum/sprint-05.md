@@ -15,17 +15,15 @@ consultable que garantiza la trazabilidad de todo lo ocurrido en el sistema.
 
 ## Sprint Backlog
 
-| ID | Historia de Usuario | Módulo | Prioridad | SP | Rama |
-| -- | ------------------- | ------ | --------- | -- | ---- |
-| HU27 | Reporte de ventas, Administrador (todas las sedes) | Reportes | Alta | 5 | `feature/HU-27-reporte-ventas-admin` |
-| HU28 | Reporte de ventas, Cajero (sede propia) | Reportes | Alta | 3 | `feature/HU-28-reporte-ventas-cajero` |
-| HU29 | Filtrar reporte por criterios combinados | Reportes | Media | 5 | `feature/HU-29-filtros-combinados` |
-| HU30 | Consultar log de eventos del sistema | Auditoría | Media | 5 | `feature/HU-30-log-de-eventos` |
+| ID | Historia de Usuario | Módulo | Prioridad | SP |
+| -- | ------------------- | ------ | --------- | -- |
+| HU27 | Reporte de ventas, Administrador (todas las sedes) | Reportes | Alta | 5 |
+| HU28 | Reporte de ventas, Cajero (sede propia) | Reportes | Alta | 3 |
+| HU29 | Filtrar reporte por criterios combinados | Reportes | Media | 5 |
+| HU30 | Consultar log de eventos del sistema | Auditoría | Media | 5 |
 
-## Entregables semanales
-
-- **Semana 1 (19 — 25 oct):** HU27 · HU28 — 8 SP
-- **Semana 2 (26 oct — 01 nov):** HU29 · HU30 — 10 SP
+El detalle de cada historia está documentado por separado en
+`hu27-reporte-ventas-administrador.md` a `hu30-log-eventos.md`.
 
 ## Sprint Review
 
@@ -37,58 +35,56 @@ consultable que garantiza la trazabilidad de todo lo ocurrido en el sistema.
 
 ### Incremento entregado
 
-- Reporte de ventas agrupado por día, sede y producto, construido únicamente sobre pedidos
-  pagados, con cantidad vendida, valor de compra, valor de venta y ganancia.
-- El Cajero obtiene el mismo reporte limitado a su sede y sin margen.
-- Filtros de fecha, sede, producto y categoría combinables entre sí.
-- Log de eventos del sistema con filtros por fecha, usuario, tipo de evento y sede, y detalle
-  completo de cada registro.
+- Reporte de ventas construido sobre comprobantes de pedidos pagados, con fecha, sede, producto,
+  categoría, cantidad, valor de compra, valor de venta y ganancia.
+- El Cajero obtiene el mismo reporte limitado a su sede y sin acceso al margen.
+- Filtros de fecha, sede, producto y categoría combinables con AND.
+- Log de eventos con filtros por fecha, usuario, tipo y sede, con detalle por evento.
 
 ## Decisiones técnicas del sprint
 
-1. **El valor de compra se congela en el ítem del pedido.** La ganancia debe calcularse con el
-   costo vigente al momento de la venta. Si se tomara el costo actual del catálogo, cambiar un
-   precio de compra reescribiría la rentabilidad histórica. La migración completó los ítems ya
-   existentes con el costo actual de su producto, que es la mejor aproximación disponible porque
-   ese dato no se guardaba antes.
-2. **El margen se retira en el servidor, no se oculta en la interfaz.** El reporte del Cajero no
-   incluye valor de compra ni ganancia en la respuesta de la API. Ocultarlo solo en pantalla
-   dejaría el dato accesible para cualquiera que mirase la petición.
-3. **La sede del reporte se resuelve en el servidor.** El Cajero queda fijado a su sede aunque
-   envíe el parámetro de otra.
-4. **Índice sobre estado y fecha de pago del pedido.** Sin él, el reporte recorrería toda la
-   tabla de pedidos. El reporte se resuelve con una única consulta de agregación, de modo que el
-   número de filtros aplicados no afecta el tiempo de respuesta.
-5. **Un filtro inválido devuelve error, no se ignora.** Pedir una sede o un producto inexistente
-   responde 404 en lugar de entregar un reporte más amplio que el solicitado, que el usuario
-   podría interpretar como válido.
-6. **La sede se incorpora al log de auditoría.** La HU30 exige filtrar por sede, pero el modelo
-   de eventos no la guardaba. Se añadió el campo y se propagó desde los módulos que la conocen;
-   las acciones de parametrización global quedan sin sede porque no pertenecen a ninguna.
+1. **El valor de compra se toma del registrado al cobrar, no del catálogo actual.** Cambiar hoy
+   un precio de compra no debe reescribir la rentabilidad histórica.
+2. **Los comprobantes anteriores al cambio no se reescriben.** Los que no guardaban precio de
+   compra ni categoría se muestran como *Not recorded* en lugar de inventar el dato con el
+   catálogo actual. Sus ventas sí se incluyen; solo los totales de compra y ganancia quedan
+   marcados como incompletos. Es preferible un reporte que admite lo que no sabe a uno que
+   presenta una cifra inventada como si fuera un hecho.
+3. **El margen se retira en el servidor para el Cajero**, no se oculta en la interfaz. Ocultarlo
+   solo en pantalla dejaría el dato accesible en la petición.
+4. **Los totales abarcan todos los resultados filtrados**, no solo la página visible.
+5. **Fechas por día completo en America/Bogota**, con validación del orden del rango.
+6. **En el log de auditoría las fechas son opcionales**; en el reporte de ventas, obligatorias.
+   La HU29 impone el rango sobre los reportes, no sobre la consulta de auditoría.
+7. **El detalle del evento conserva la marca de tiempo original completa**, sin truncar la
+   precisión, junto a la hora legible en Bogota.
+8. **El código de producto es su identificador existente**, sin introducir un SKU nuevo que no
+   pide ninguna historia.
 
-## Defectos detectados y corregidos
+## Ajustes solicitados en la revisión del docente
 
-Durante la HU27, dos errores en la consulta de agregación, ambos detectados por las pruebas antes
-de integrar:
+Incorporados el 23 de octubre y documentados en `ajustes-revision-docente.md`:
 
-1. Un alias llamado `product_id` colisionaba con el campo del propio modelo.
-2. Un alias llamado `quantity` tapaba el campo `quantity`, de modo que las sumas de importes
-   intentaban operar sobre un agregado en lugar de sobre el campo.
+- **El precio de venta no puede ser inferior al de compra.** Validado en el formulario y en la
+  API, tanto al crear como al editar. Una solicitud rechazada no guarda el producto ni registra
+  una modificación exitosa en la auditoría. No se alteran precios existentes ni los congelados
+  en pedidos históricos.
+- **Tipo y categoría pasan a listas desplegables**, sin texto libre desde la interfaz.
+- **Preparación de datos para la presentación**, con respaldo previo de MySQL y conservando el
+  historial de auditoría.
 
 ## Retrospectiva — Start / Stop / Continue
 
 **Start**
-- Verificar los requisitos no funcionales con pruebas, no por inspección. El tiempo de respuesta
-  del reporte y del log se mide sobre volúmenes realistas.
+- Distinguir en los reportes el dato ausente del dato cero. *Not recorded* comunica algo
+  distinto de un cero, y confundirlos induce a error en una decisión de negocio.
 
 **Stop**
-- Asumir que una restricción de visibilidad se resuelve en la interfaz. La información que un rol
-  no debe ver no debe salir del servidor.
+- Rellenar huecos del histórico con valores actuales. Un reporte inventado es peor que un
+  reporte incompleto.
 
 **Continue**
-- Una prueba por criterio de aceptación. Es lo que permitió cerrar las 30 historias con la
-  Definition of Done cumplida y verificable, y lo que detectó los defectos de este sprint y del
-  Sprint 3 antes de integrarlos.
+- Una prueba por criterio de aceptación, y pruebas de interfaz sobre los flujos completos.
 
 ## Cierre del proyecto
 

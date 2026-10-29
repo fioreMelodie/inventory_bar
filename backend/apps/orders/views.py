@@ -5,9 +5,9 @@ HU19: Crear pedido (Mesero).
 HU16: Descuento automático de stock y reintegro al cancelar.
 HU20: Agregar productos a un pedido.
 HU21: Enviar pedido a caja.
-HU22: Consultar pedidos activos (Cajero).
 """
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -21,7 +21,10 @@ from apps.inventory.services import InsufficientStock, discount_for_order, resto
 from apps.tables.models import TableStatus
 
 from .models import Order, OrderItem, OrderStatus
-from .serializers import AddOrderItemSerializer, OrderCreateSerializer, OrderSerializer
+from .serializers import (
+    AddOrderItemSerializer, OrderCreateSerializer, OrderSerializer,
+    PendingOrderFilterSerializer,
+)
 
 
 class CanTakeOrders(BasePermission):
@@ -40,6 +43,16 @@ class CanTakeOrders(BasePermission):
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
         return request.user.role in (Role.WAITER, Role.ADMIN)
+
+
+class CanViewCashierQueue(BasePermission):
+    message = "Only cashiers and administrators can view the payment queue."
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated
+            and request.user.role in (Role.ADMIN, Role.CASHIER)
+        )
 
 
 class OrderViewSet(
@@ -69,6 +82,10 @@ class OrderViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.request.method == "GET":
+            queryset = queryset.select_related("payment__invoice")
+        if self.action in ("cancel", "add_item", "send_to_cashier"):
+            queryset = queryset.select_for_update()
 
         # Cajero y Mesero solo acceden a los pedidos de su sede asignada.
         if self.request.user.role != Role.ADMIN:
@@ -82,16 +99,27 @@ class OrderViewSet(
         if order_status:
             queryset = queryset.filter(status=order_status)
 
-            # El panel de caja se atiende en orden de llegada, por lo que los
-            # pedidos enviados se ordenan por hora de envío ascendente (HU22).
-            if order_status == OrderStatus.IN_CASHIER:
-                queryset = queryset.order_by("sent_to_cashier_at")
-
         table_id = self.request.query_params.get("table")
         if table_id:
             queryset = queryset.filter(table_id=table_id)
 
         return queryset
+
+    @action(detail=False, methods=["get"], permission_classes=[CanViewCashierQueue])
+    def pending(self, request):
+        """HU22: cola de cobro, por sede y en orden de envio a caja."""
+        filters = PendingOrderFilterSerializer(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        queryset = self.queryset.all().filter(status=OrderStatus.IN_CASHIER)
+        if request.user.role == Role.CASHIER:
+            queryset = queryset.filter(venue=request.user.venue)
+        elif "venue" in filters.validated_data:
+            queryset = queryset.filter(venue=filters.validated_data["venue"])
+        queryset = queryset.order_by(F("sent_to_cashier_at").asc(nulls_last=True), "id")
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(OrderSerializer(page, many=True).data)
+        return Response(OrderSerializer(queryset, many=True).data)
 
     def create(self, request, *args, **kwargs):
         """Abre el pedido y marca la mesa como ocupada."""
@@ -100,6 +128,8 @@ class OrderViewSet(
         table = serializer.validated_data["table"]
 
         with transaction.atomic():
+            table = type(table).objects.select_for_update().get(pk=table.pk)
+            serializer.validate_table(table)
             order = Order.objects.create(
                 venue=table.venue,
                 table=table,
@@ -114,18 +144,19 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Apertura del pedido {order.id} en la mesa '{table.identifier}' "
-                f"de la sede '{table.venue.name}'."
+                f"Opened order {order.id} at table '{table.identifier}' "
+                f"at venue '{table.venue.name}'."
             ),
-            venue=table.venue,
             request=request,
         )
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def cancel(self, request, pk=None):
         """
         POST /api/orders/{id}/cancel/
@@ -145,6 +176,12 @@ class OrderViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if order.waiter != request.user and request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "You can only cancel orders you opened."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         with transaction.atomic():
             restore_for_order(order=order, performed_by=request.user, request=request)
 
@@ -160,18 +197,19 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Cancelación del pedido {order.id} de la mesa "
-                f"'{table.identifier}'. El stock descontado fue reintegrado."
+                f"Cancelled order {order.id} at table "
+                f"'{table.identifier}'. Deducted stock was restored."
             ),
-            venue=order.venue,
             request=request,
         )
 
         return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="items")
+    @transaction.atomic
     def add_item(self, request, pk=None):
         """
         POST /api/orders/{id}/items/
@@ -217,9 +255,8 @@ class OrderViewSet(
                     order=order,
                     product=product,
                     defaults={
-                        # Precio y costo se congelan al agregar el ítem.
+                        # El precio se congela al momento de agregar el ítem.
                         "unit_price": product.sale_price,
-                        "unit_cost": product.purchase_price,
                         "quantity": quantity,
                     },
                 )
@@ -236,12 +273,12 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Se agregaron {quantity} unidades de '{product.name}' al pedido "
-                f"{order.id}. Total del pedido: {order.total}."
+                f"Added {quantity} units of '{product.name}' to order "
+                f"{order.id}. Order total: {order.total}."
             ),
-            venue=order.venue,
             request=request,
         )
 
@@ -249,6 +286,7 @@ class OrderViewSet(
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="send-to-cashier")
+    @transaction.atomic
     def send_to_cashier(self, request, pk=None):
         """
         POST /api/orders/{id}/send-to-cashier/
@@ -288,12 +326,12 @@ class OrderViewSet(
             username=request.user.username,
             user=request.user,
             entity="Order",
+            venue=order.venue,
             entity_id=order.id,
             description=(
-                f"Envío a caja del pedido {order.id} de la mesa "
-                f"'{order.table.identifier}'. Total: {order.total}."
+                f"Sent order {order.id} at table "
+                f"'{order.table.identifier}' to the cashier. Total: {order.total}."
             ),
-            venue=order.venue,
             request=request,
         )
 

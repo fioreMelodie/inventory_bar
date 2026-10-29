@@ -6,6 +6,9 @@ from django.http import JsonResponse
 from django.urls import include, path, re_path
 from django.views.static import serve
 
+admin.site.site_header = "Bar Inventory administration"
+admin.site.site_title = "Bar Inventory admin"
+
 
 def health(request):
     """Endpoint de verificación de disponibilidad del servicio."""
@@ -13,7 +16,7 @@ def health(request):
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("django-admin/", admin.site.urls),
     path("api/health/", health, name="health"),
     path("api/auth/", include("apps.authentication.urls")),
     path("api/", include("apps.locations.urls")),
@@ -23,8 +26,7 @@ urlpatterns = [
     path("api/", include("apps.inventory.urls")),
     path("api/", include("apps.tables.urls")),
     path("api/", include("apps.orders.urls")),
-    path("api/", include("apps.billing.urls")),
-    path("api/", include("apps.reports.urls")),
+    path("api/", include("apps.payments.urls")),
     path("api/", include("apps.audit.urls")),
 ]
 

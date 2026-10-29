@@ -26,6 +26,15 @@ SESSION_CLOSED_MESSAGE = "Your session is no longer valid. Please sign in again.
 class SessionAwareJWTAuthentication(JWTAuthentication):
     """JWTAuthentication que además valida el estado de la sesión."""
 
+    def authenticate(self, request):
+        result = super().authenticate(request)
+        if result is not None and request.headers.get("X-Session-Activity") != "background":
+            user, _ = result
+            UserSession.objects.filter(pk=user.active_session_id, ended_at__isnull=True).update(
+                last_activity_at=timezone.now()
+            )
+        return result
+
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
 
@@ -35,21 +44,21 @@ class SessionAwareJWTAuthentication(JWTAuthentication):
             # sesión válido de la aplicación.
             raise AuthenticationFailed(SESSION_CLOSED_MESSAGE, code="session_not_found")
 
-        session = UserSession.objects.filter(id=session_id, user=user).first()
+        session = UserSession.objects.select_related("venue").filter(id=session_id, user=user).first()
         if session is None or not session.is_active:
             raise AuthenticationFailed(SESSION_CLOSED_MESSAGE, code="session_closed")
 
         now = timezone.now()
-        if now - session.last_activity_at > INACTIVITY_TIMEOUT:
+        if now - session.last_activity_at >= INACTIVITY_TIMEOUT:
             # El corte se aplica en servidor aunque el frontend no lo haya
             # solicitado (por ejemplo, si el navegador se cerró abruptamente).
             close_session_by_inactivity(session)
             raise AuthenticationFailed(SESSION_EXPIRED_MESSAGE, code="session_expired")
 
-        # Cada interacción del usuario reinicia el contador de inactividad.
-        session.last_activity_at = now
-        session.save(update_fields=["last_activity_at"])
-
+        # Los permisos corresponden a esta sesion, sin modificar la cuenta.
+        user.role = session.role
+        user.venue = session.venue
+        user.active_session_id = session.pk
         return user
 
 

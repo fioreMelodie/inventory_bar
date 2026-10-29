@@ -53,13 +53,13 @@ class ProductViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.action not in ("list",):
+        if self.action not in ("list", "retrieve"):
             return queryset
 
         # Solo se muestran productos activos, salvo que el Administrador pida
         # explícitamente ver también los inactivos.
         include_inactive = (
-            self.request.query_params.get("include_inactive") == "true"
+            (self.action == "retrieve" or self.request.query_params.get("include_inactive") == "true")
             and self.request.user.is_admin
         )
         if not include_inactive:
@@ -89,9 +89,9 @@ class ProductViewSet(
             entity="Product",
             entity_id=product.id,
             description=(
-                f"Creación del producto '{product.name}' "
+                f"Created product '{product.name}' "
                 f"({product.product_type} / {product.category}) "
-                f"con valor de venta {product.sale_price}."
+                f"with sale price {product.sale_price}."
             ),
             request=self.request,
         )
@@ -130,9 +130,9 @@ class ProductViewSet(
             entity="Product",
             entity_id=product.id,
             description=(
-                f"Edición del producto '{product.name}'. " + "; ".join(changes)
+                f"Updated product '{product.name}'. " + "; ".join(changes)
                 if changes
-                else f"Edición del producto '{product.name}' sin cambios efectivos."
+                else f"Updated product '{product.name}' with no effective changes."
             ),
             request=self.request,
         )

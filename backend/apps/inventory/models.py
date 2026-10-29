@@ -16,20 +16,20 @@ class Stock(models.Model):
         "locations.Venue",
         on_delete=models.CASCADE,
         related_name="stock_items",
-        verbose_name="sede",
+        verbose_name="venue",
     )
     product = models.ForeignKey(
         "catalog.Product",
         on_delete=models.PROTECT,
         related_name="stock_items",
-        verbose_name="producto",
+        verbose_name="product",
     )
-    quantity = models.PositiveIntegerField("cantidad disponible", default=0)
-    updated_at = models.DateTimeField("última actualización", auto_now=True)
+    quantity = models.PositiveIntegerField("available quantity", default=0)
+    updated_at = models.DateTimeField("updated at", auto_now=True)
 
     class Meta:
-        verbose_name = "existencia"
-        verbose_name_plural = "existencias"
+        verbose_name = "stock item"
+        verbose_name_plural = "stock items"
         ordering = ["product__name"]
         constraints = [
             models.UniqueConstraint(
@@ -38,15 +38,15 @@ class Stock(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.product.name} en {self.venue.name}: {self.quantity}"
+        return f"{self.product.name} at {self.venue.name}: {self.quantity}"
 
 
 class MovementType(models.TextChoices):
     """Origen de un movimiento de inventario."""
 
-    ENTRY = "ENTRY", "Entrada de mercancía"
-    ORDER_DISCOUNT = "ORDER_DISCOUNT", "Descuento por pedido"
-    ORDER_RESTORE = "ORDER_RESTORE", "Reintegro por cancelación de pedido"
+    ENTRY = "ENTRY", "Stock entry"
+    ORDER_DISCOUNT = "ORDER_DISCOUNT", "Order stock deduction"
+    ORDER_RESTORE = "ORDER_RESTORE", "Cancelled order stock restoration"
 
 
 class StockMovement(models.Model):
@@ -62,20 +62,20 @@ class StockMovement(models.Model):
         "locations.Venue",
         on_delete=models.PROTECT,
         related_name="stock_movements",
-        verbose_name="sede",
+        verbose_name="venue",
     )
     product = models.ForeignKey(
         "catalog.Product",
         on_delete=models.PROTECT,
         related_name="stock_movements",
-        verbose_name="producto",
+        verbose_name="product",
     )
     movement_type = models.CharField(
-        "tipo de movimiento", max_length=20, choices=MovementType.choices
+        "movement type", max_length=20, choices=MovementType.choices
     )
     # Positiva en las entradas y negativa en las salidas, de modo que la suma
     # de los movimientos reconstruye el stock actual.
-    quantity = models.IntegerField("cantidad")
+    quantity = models.IntegerField("quantity")
     # Los movimientos originados por un pedido guardan su referencia, de modo
     # que el consumo sea trazable hasta la orden que lo produjo.
     order = models.ForeignKey(
@@ -84,24 +84,24 @@ class StockMovement(models.Model):
         null=True,
         blank=True,
         related_name="stock_movements",
-        verbose_name="pedido",
+        verbose_name="order",
     )
     performed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name="stock_movements",
-        verbose_name="registrado por",
+        verbose_name="recorded by",
     )
-    created_at = models.DateTimeField("fecha y hora", auto_now_add=True, db_index=True)
+    created_at = models.DateTimeField("date and time", auto_now_add=True, db_index=True)
 
     class Meta:
-        verbose_name = "movimiento de inventario"
-        verbose_name_plural = "movimientos de inventario"
+        verbose_name = "stock movement"
+        verbose_name_plural = "stock movements"
         ordering = ["-created_at"]
 
     def __str__(self):
         return (
-            f"{self.get_movement_type_display()} de {self.quantity} "
-            f"{self.product.name} en {self.venue.name}"
+            f"{self.get_movement_type_display()} of {self.quantity} "
+            f"{self.product.name} at {self.venue.name}"
         )
