@@ -31,3 +31,6 @@ backups/
 
 # Archivos cargados por los usuarios (imagenes de producto)
 media/
+
+# Estaticos recolectados por collectstatic en el despliegue
+staticfiles/
