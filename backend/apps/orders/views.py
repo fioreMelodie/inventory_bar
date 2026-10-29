@@ -119,6 +119,7 @@ class OrderViewSet(
                 f"Apertura del pedido {order.id} en la mesa '{table.identifier}' "
                 f"de la sede '{table.venue.name}'."
             ),
+            venue=table.venue,
             request=request,
         )
 
@@ -164,6 +165,7 @@ class OrderViewSet(
                 f"Cancelación del pedido {order.id} de la mesa "
                 f"'{table.identifier}'. El stock descontado fue reintegrado."
             ),
+            venue=order.venue,
             request=request,
         )
 
@@ -239,6 +241,7 @@ class OrderViewSet(
                 f"Se agregaron {quantity} unidades de '{product.name}' al pedido "
                 f"{order.id}. Total del pedido: {order.total}."
             ),
+            venue=order.venue,
             request=request,
         )
 
@@ -290,6 +293,7 @@ class OrderViewSet(
                 f"Envío a caja del pedido {order.id} de la mesa "
                 f"'{order.table.identifier}'. Total: {order.total}."
             ),
+            venue=order.venue,
             request=request,
         )
 

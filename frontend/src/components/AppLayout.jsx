@@ -17,6 +17,7 @@ const MENU_BY_ROLE = {
     { to: '/cashier/orders', label: 'Cashier' },
     { to: '/billing', label: 'Invoices' },
     { to: '/reports', label: 'Reports' },
+    { to: '/admin/audit', label: 'Audit' },
   ],
   CASHIER: [
     { to: '/cashier', label: 'Home', end: true },

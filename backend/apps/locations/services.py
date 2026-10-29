@@ -63,6 +63,7 @@ def deactivate_venue(venue, *, performed_by, request=None):
         entity="Venue",
         entity_id=venue.id,
         description=description,
+        venue=venue,
         request=request,
     )
     return venue
