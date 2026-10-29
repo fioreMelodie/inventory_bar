@@ -132,6 +132,14 @@ export default function SalesReportPage() {
       </form>
       {(error || venueError) && <div className="error-banner" role="alert"><span>{error || venueError}</span><button onClick={() => setRefresh(value => value + 1)} disabled={loading}>Retry</button></div>}
       {loading && <p className="empty-cell">Generating report...</p>}
+      {/*
+        Estado inicial: sin rango de fechas no hay reporte que mostrar. Antes
+        la pantalla quedaba vacía bajo el formulario, sin indicar qué hacer.
+      */}
+      {!loading && !summary && !error && !venueError && <div className="empty-state">
+        <strong>Select a date range and generate the report.</strong>
+        <span>Results cover paid orders only, with no limit on how far back they go.</span>
+      </div>}
       {summary && <>
         <section className={'sales-metrics' + (isAdmin ? '' : ' cashier-sales-metrics')} aria-label="Sales totals">{(isAdmin ? [['Sales', money(summary.sales)], ['Purchase value', money(summary.purchase_value)], ['Profit', money(summary.profit)], ['Units sold', summary.quantity]] : [['Sales', money(summary.sales)], ['Units sold', summary.quantity]]).map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>
         {isAdmin && summary.missing_cost_lines > 0 && <p className="sales-warning" role="status">Historical purchase cost is missing for {summary.missing_cost_lines} lines. Total purchase value and profit are not available.</p>}
