@@ -100,6 +100,7 @@ def register_payment(*, order, cashier, payment_method, amount_received=None, re
             f"Factura {invoice.number} generada en la sede '{venue.name}'. "
             f"Mesa '{table.identifier}' liberada."
         ),
+        venue=venue,
         request=request,
     )
 

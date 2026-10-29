@@ -118,5 +118,6 @@ class VenueViewSet(
             entity="Venue",
             entity_id=venue.id,
             description=f"Creación de la sede '{venue.name}'.",
+            venue=venue,
             request=self.request,
         )

@@ -53,6 +53,7 @@ def register_entry(*, venue, product, quantity, performed_by, request=None):
             f"Entrada de {quantity} unidades de '{product.name}' en la sede "
             f"'{venue.name}'. Stock resultante: {stock.quantity}."
         ),
+        venue=venue,
         request=request,
     )
 
@@ -116,6 +117,7 @@ def discount_for_order(*, order, product, quantity, performed_by, request=None):
             f"{order.id} en la sede '{order.venue.name}'. "
             f"Stock resultante: {stock.quantity}."
         ),
+        venue=order.venue,
         request=request,
     )
 
@@ -157,6 +159,7 @@ def restore_for_order(*, order, performed_by, request=None):
                 f"por la cancelación del pedido {order.id} en la sede "
                 f"'{order.venue.name}'. Stock resultante: {stock.quantity}."
             ),
+            venue=order.venue,
             request=request,
         )
         restored.append(stock)

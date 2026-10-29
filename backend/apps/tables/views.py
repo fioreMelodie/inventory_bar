@@ -81,6 +81,7 @@ class TableViewSet(
                 f"Creación de la mesa '{table.identifier}' en la sede "
                 f"'{table.venue.name}'."
             ),
+            venue=table.venue,
             request=self.request,
         )
 
@@ -100,6 +101,7 @@ class TableViewSet(
                 f"Edición de la mesa en la sede '{table.venue.name}'. "
                 f"identifier: '{previous_identifier}' -> '{table.identifier}'."
             ),
+            venue=table.venue,
             request=self.request,
         )
 
@@ -138,6 +140,7 @@ class TableViewSet(
                 f"Inactivación de la mesa '{table.identifier}' en la sede "
                 f"'{table.venue.name}'."
             ),
+            venue=table.venue,
             request=request,
         )
 
