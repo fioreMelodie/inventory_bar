@@ -13,47 +13,48 @@ from django.db import models
 class EventType(models.TextChoices):
     """Tipos de evento registrables en el log de auditoría."""
 
-    LOGIN_SUCCESS = "LOGIN_SUCCESS", "Inicio de sesión exitoso"
-    LOGIN_FAILED = "LOGIN_FAILED", "Intento de inicio de sesión fallido"
-    LOGIN_BLOCKED = "LOGIN_BLOCKED", "Acceso bloqueado por intentos fallidos"
-    SESSION_TIMEOUT = "SESSION_TIMEOUT", "Cierre de sesión por inactividad"
-    SESSION_LOGOUT = "SESSION_LOGOUT", "Cierre de sesión manual"
-    SESSION_DISCONNECTED = "SESSION_DISCONNECTED", "Cierre de sesión por pérdida de conexión"
-    SESSION_REVOKED = "SESSION_REVOKED", "Sesión revocada por el sistema"
-    VENUE_CREATED = "VENUE_CREATED", "Creación de sede"
-    VENUE_UPDATED = "VENUE_UPDATED", "Modificación de sede"
-    VENUE_DEACTIVATED = "VENUE_DEACTIVATED", "Inactivación de sede"
-    USER_CREATED = "USER_CREATED", "Creación de usuario"
-    USER_UPDATED = "USER_UPDATED", "Modificación de usuario"
-    USER_DEACTIVATED = "USER_DEACTIVATED", "Inactivación de usuario"
-    USER_REACTIVATED = "USER_REACTIVATED", "Reactivación de usuario"
-    PRODUCT_CREATED = "PRODUCT_CREATED", "Creación de producto"
-    PRODUCT_UPDATED = "PRODUCT_UPDATED", "Modificación de producto"
-    SUPPLIER_CREATED = "SUPPLIER_CREATED", "Registro de proveedor"
-    SUPPLIER_UPDATED = "SUPPLIER_UPDATED", "Modificación de proveedor"
-    SUPPLIER_DELETED = "SUPPLIER_DELETED", "Eliminación de proveedor"
-    SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Asociación de productos a proveedor"
-    STOCK_ENTRY = "STOCK_ENTRY", "Entrada de mercancía al inventario"
-    TABLE_CREATED = "TABLE_CREATED", "Creación de mesa"
-    TABLE_UPDATED = "TABLE_UPDATED", "Modificación de mesa"
-    TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Inactivación de mesa"
-    ORDER_OPENED = "ORDER_OPENED", "Apertura de pedido"
-    ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
-    ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Producto agregado a un pedido"
-    ORDER_SENT_TO_CASHIER = "ORDER_SENT_TO_CASHIER", "Pedido enviado a caja"
-    PAYMENT_REGISTERED = "PAYMENT_REGISTERED", "Pago registrado y factura generada"
-    STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
-    STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
+    LOGIN_SUCCESS = "LOGIN_SUCCESS", "Successful sign-in"
+    LOGIN_FAILED = "LOGIN_FAILED", "Failed sign-in"
+    LOGIN_BLOCKED = "LOGIN_BLOCKED", "Sign-in locked after failed attempts"
+    SESSION_TIMEOUT = "SESSION_TIMEOUT", "Inactivity sign-out"
+    SESSION_LOGOUT = "SESSION_LOGOUT", "Manual sign-out"
+    SESSION_DISCONNECTED = "SESSION_DISCONNECTED", "Connection loss sign-out"
+    SESSION_REVOKED = "SESSION_REVOKED", "Session revoked"
+    VENUE_CREATED = "VENUE_CREATED", "Venue created"
+    VENUE_UPDATED = "VENUE_UPDATED", "Venue updated"
+    VENUE_DEACTIVATED = "VENUE_DEACTIVATED", "Venue deactivated"
+    USER_CREATED = "USER_CREATED", "User created"
+    USER_UPDATED = "USER_UPDATED", "User updated"
+    USER_DEACTIVATED = "USER_DEACTIVATED", "User deactivated"
+    USER_REACTIVATED = "USER_REACTIVATED", "User reactivated"
+    PRODUCT_CREATED = "PRODUCT_CREATED", "Product created"
+    PRODUCT_UPDATED = "PRODUCT_UPDATED", "Product updated"
+    SUPPLIER_CREATED = "SUPPLIER_CREATED", "Supplier created"
+    SUPPLIER_UPDATED = "SUPPLIER_UPDATED", "Supplier updated"
+    SUPPLIER_DELETED = "SUPPLIER_DELETED", "Supplier deleted"
+    SUPPLIER_PRODUCTS_LINKED = "SUPPLIER_PRODUCTS_LINKED", "Supplier products linked"
+    STOCK_ENTRY = "STOCK_ENTRY", "Stock entry"
+    TABLE_CREATED = "TABLE_CREATED", "Table created"
+    TABLE_UPDATED = "TABLE_UPDATED", "Table updated"
+    TABLE_DEACTIVATED = "TABLE_DEACTIVATED", "Table deactivated"
+    ORDER_OPENED = "ORDER_OPENED", "Order opened"
+    ORDER_CANCELLED = "ORDER_CANCELLED", "Order cancelled"
+    ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Order item added"
+    ORDER_SENT_TO_CASHIER = "ORDER_SENT_TO_CASHIER", "Order sent to cashier"
+    STOCK_DISCOUNT = "STOCK_DISCOUNT", "Order stock deducted"
+    STOCK_RESTORE = "STOCK_RESTORE", "Cancelled order stock restored"
+    PAYMENT_PROCESSED = "PAYMENT_PROCESSED", "Payment processed"
+    INVOICE_GENERATED = "INVOICE_GENERATED", "Receipt generated"
 
 
 class AuditEventQuerySet(models.QuerySet):
     """QuerySet que impide la modificación masiva de registros de auditoría."""
 
     def update(self, **kwargs):
-        raise NotImplementedError("Los registros de auditoría son inmutables.")
+        raise NotImplementedError("Audit records are immutable.")
 
     def delete(self):
-        raise NotImplementedError("Los registros de auditoría no pueden eliminarse.")
+        raise NotImplementedError("Audit records cannot be deleted.")
 
 
 class AuditEvent(models.Model):
@@ -70,40 +71,34 @@ class AuditEvent(models.Model):
         null=True,
         blank=True,
         related_name="audit_events",
-        verbose_name="usuario",
+        verbose_name="user",
     )
     # Se conserva el nombre de usuario en texto para que el registro siga siendo
     # legible aunque la cuenta sea eliminada o el intento corresponda a un
     # usuario inexistente.
-    username = models.CharField("nombre de usuario", max_length=150)
-    event_type = models.CharField("tipo de evento", max_length=40, choices=EventType.choices)
-    # Sede en la que ocurrió el evento. Queda vacía en las acciones que no
-    # pertenecen a ninguna sede, como la parametrización global del catálogo.
-    venue = models.ForeignKey(
-        "locations.Venue",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="audit_events",
-        verbose_name="sede",
-    )
-    entity = models.CharField("entidad afectada", max_length=60, blank=True)
-    entity_id = models.CharField("id de la entidad", max_length=40, blank=True)
-    description = models.TextField("descripción", blank=True)
-    ip_address = models.GenericIPAddressField("dirección IP", null=True, blank=True)
-    created_at = models.DateTimeField("fecha y hora", auto_now_add=True, db_index=True)
+    username = models.CharField("username", max_length=150)
+    event_type = models.CharField("event type", max_length=40, choices=EventType.choices)
+    entity = models.CharField("entity", max_length=60, blank=True)
+    entity_id = models.CharField("entity ID", max_length=40, blank=True)
+    description = models.TextField("description", blank=True)
+    ip_address = models.GenericIPAddressField("IP address", null=True, blank=True)
+    venue = models.ForeignKey("locations.Venue", on_delete=models.PROTECT, null=True, blank=True,
+                              related_name="audit_events", verbose_name="venue")
+    venue_name = models.CharField("recorded venue name", max_length=120, blank=True, default="")
+    venue_recorded = models.BooleanField("venue context recorded", default=False)
+    created_at = models.DateTimeField("date and time", auto_now_add=True, db_index=True)
 
     objects = AuditEventQuerySet.as_manager()
 
     class Meta:
-        verbose_name = "evento de auditoría"
-        verbose_name_plural = "eventos de auditoría"
+        verbose_name = "audit event"
+        verbose_name_plural = "audit events"
         ordering = ["-created_at"]
         indexes = [
+            models.Index(fields=["created_at", "id"], name="audit_date_id_idx"),
+            models.Index(fields=["venue", "created_at", "id"], name="audit_venue_date_idx"),
             models.Index(fields=["event_type", "created_at"]),
             models.Index(fields=["username"]),
-            # El log se consulta filtrando por sede y fecha (HU30).
-            models.Index(fields=["venue", "created_at"], name="audit_venue_date_idx"),
         ]
 
     def __str__(self):
@@ -112,8 +107,8 @@ class AuditEvent(models.Model):
     def save(self, *args, **kwargs):
         """Permite la creación pero nunca la modificación de un registro."""
         if self.pk is not None:
-            raise NotImplementedError("Los registros de auditoría son inmutables.")
+            raise NotImplementedError("Audit records are immutable.")
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise NotImplementedError("Los registros de auditoría no pueden eliminarse.")
+        raise NotImplementedError("Audit records cannot be deleted.")

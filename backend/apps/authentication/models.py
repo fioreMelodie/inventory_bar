@@ -17,18 +17,18 @@ class LoginAttempt(models.Model):
     acceso se bloquea durante 5 minutos.
     """
 
-    username = models.CharField("nombre de usuario", max_length=150, db_index=True)
-    successful = models.BooleanField("exitoso", default=False)
-    ip_address = models.GenericIPAddressField("dirección IP", null=True, blank=True)
-    created_at = models.DateTimeField("fecha y hora", auto_now_add=True, db_index=True)
+    username = models.CharField("username", max_length=150, db_index=True)
+    successful = models.BooleanField("successful", default=False)
+    ip_address = models.GenericIPAddressField("IP address", null=True, blank=True)
+    created_at = models.DateTimeField("date and time", auto_now_add=True, db_index=True)
 
     class Meta:
-        verbose_name = "intento de inicio de sesión"
-        verbose_name_plural = "intentos de inicio de sesión"
+        verbose_name = "login attempt"
+        verbose_name_plural = "login attempts"
         ordering = ["-created_at"]
 
     def __str__(self):
-        estado = "exitoso" if self.successful else "fallido"
+        estado = "successful" if self.successful else "failed"
         return f"{self.username} - {estado} - {self.created_at:%Y-%m-%d %H:%M:%S}"
 
 
@@ -41,21 +41,21 @@ class UserSession(models.Model):
     """
 
     class ClosingReason(models.TextChoices):
-        ACTIVE = "ACTIVE", "Sesión activa"
-        INACTIVITY = "INACTIVITY", "Cierre automático por inactividad"
-        MANUAL = "MANUAL", "Cierre manual por el usuario"
-        DISCONNECTION = "DISCONNECTION", "Cierre por pérdida de conexión"
-        USER_DEACTIVATED = "USER_DEACTIVATED", "Cierre por inactivación de la cuenta"
+        ACTIVE = "ACTIVE", "Active session"
+        INACTIVITY = "INACTIVITY", "Inactivity timeout"
+        MANUAL = "MANUAL", "Manual sign-out"
+        DISCONNECTION = "DISCONNECTION", "Connection lost"
+        USER_DEACTIVATED = "USER_DEACTIVATED", "Account deactivated"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="sessions",
-        verbose_name="usuario",
+        verbose_name="user",
     )
     # El rol se guarda en la sesión porque un cambio posterior de rol solo debe
     # aplicar a partir del siguiente inicio de sesión (criterio de la HU07).
-    role = models.CharField("rol", max_length=20)
+    role = models.CharField("role", max_length=20)
     # La sede se guarda en la sesión porque un cambio posterior solo debe
     # aplicar a partir del siguiente inicio de sesión (criterio de la HU07).
     venue = models.ForeignKey(
@@ -64,22 +64,22 @@ class UserSession(models.Model):
         null=True,
         blank=True,
         related_name="sessions",
-        verbose_name="sede",
+        verbose_name="venue",
     )
-    started_at = models.DateTimeField("fecha y hora de ingreso", default=timezone.now)
-    last_activity_at = models.DateTimeField("última actividad", default=timezone.now)
-    ended_at = models.DateTimeField("fecha y hora de cierre", null=True, blank=True)
+    started_at = models.DateTimeField("signed in at", default=timezone.now)
+    last_activity_at = models.DateTimeField("last activity", default=timezone.now)
+    ended_at = models.DateTimeField("signed out at", null=True, blank=True)
     closing_reason = models.CharField(
-        "motivo de cierre",
+        "closing reason",
         max_length=20,
         choices=ClosingReason.choices,
         default=ClosingReason.ACTIVE,
     )
-    ip_address = models.GenericIPAddressField("dirección IP", null=True, blank=True)
+    ip_address = models.GenericIPAddressField("IP address", null=True, blank=True)
 
     class Meta:
-        verbose_name = "sesión de usuario"
-        verbose_name_plural = "sesiones de usuario"
+        verbose_name = "user session"
+        verbose_name_plural = "user sessions"
         ordering = ["-started_at"]
 
     def __str__(self):

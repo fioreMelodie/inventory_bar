@@ -13,9 +13,9 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = (
         (None, {"fields": ("username", "password")}),
-        ("Datos personales", {"fields": ("full_name",)}),
-        ("Rol y estado", {"fields": ("role", "is_active")}),
-        ("Permisos", {"fields": ("is_staff", "is_superuser", "groups", "user_permissions")}),
+        ("Personal details", {"fields": ("full_name",)}),
+        ("Role and status", {"fields": ("role", "is_active")}),
+        ("Permissions", {"fields": ("is_staff", "is_superuser", "groups", "user_permissions")}),
     )
     add_fieldsets = (
         (None, {

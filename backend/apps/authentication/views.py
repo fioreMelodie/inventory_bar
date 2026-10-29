@@ -72,7 +72,7 @@ class LoginView(APIView):
             record_event(
                 event_type=EventType.LOGIN_BLOCKED,
                 username=username,
-                description=f"Acceso bloqueado. Faltan {remaining} segundos para el desbloqueo.",
+                description=f"Access locked. Unlocks in {remaining} seconds.",
                 request=request,
             )
             return Response(
@@ -99,16 +99,17 @@ class LoginView(APIView):
             # para la respuesta al usuario.
             existing = User.objects.filter(username=username).first()
             if existing is None:
-                motivo = "El usuario no existe."
+                motivo = "User does not exist."
             elif not existing.is_active:
-                motivo = "La cuenta se encuentra inactiva."
+                motivo = "Account is inactive."
             else:
-                motivo = "Contraseña incorrecta."
+                motivo = "Incorrect password."
 
             record_event(
                 event_type=EventType.LOGIN_FAILED,
                 username=username,
                 user=existing,
+                venue=existing.venue if existing else None,
                 description=motivo,
                 request=request,
             )
@@ -136,8 +137,9 @@ class LoginView(APIView):
             username=user.username,
             user=user,
             entity="UserSession",
+            venue=session.venue,
             entity_id=session.id,
-            description=f"Inicio de sesión con rol {user.get_role_display()}.",
+            description=f"Signed in with role {user.get_role_display()}.",
             request=request,
         )
 
@@ -286,7 +288,7 @@ class SessionTokenRefreshView(APIView):
                 {"detail": SESSION_CLOSED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
             )
 
-        if timezone.now() - session.last_activity_at > INACTIVITY_TIMEOUT:
+        if timezone.now() - session.last_activity_at >= INACTIVITY_TIMEOUT:
             close_session_by_inactivity(session, request=request)
             return Response(
                 {"detail": SESSION_EXPIRED_MESSAGE}, status=status.HTTP_401_UNAUTHORIZED
@@ -304,8 +306,9 @@ class SessionTokenRefreshView(APIView):
 
         # La renovación cuenta como actividad: la pide el frontend porque el
         # usuario está operando el sistema.
-        session.last_activity_at = timezone.now()
-        session.save(update_fields=["last_activity_at"])
+        if request.headers.get("X-Session-Activity") != "background":
+            session.last_activity_at = timezone.now()
+            session.save(update_fields=["last_activity_at"])
 
         data = {"access": str(token.access_token)}
 

@@ -1,11 +1,9 @@
-"""Rutas del Módulo 11 - Auditoría y Trazabilidad."""
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-from .views import AuditEventViewSet
+from .views import AuditEventDetailView, AuditEventListView
 
 app_name = "audit"
-
-router = DefaultRouter()
-router.register("audit/events", AuditEventViewSet, basename="audit-event")
-
-urlpatterns = router.urls
+urlpatterns = [
+    path("audit/events/", AuditEventListView.as_view(), name="event-list"),
+    path("audit/events/<int:pk>/", AuditEventDetailView.as_view(), name="event-detail"),
+]

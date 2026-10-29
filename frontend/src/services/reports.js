@@ -1,18 +1,21 @@
 import api from './api'
 
-/** Módulo 10 - Reportes. */
 export const reportsService = {
-  /**
-   * Reporte de ventas (HU27 / HU28).
-   * El rango de fechas es obligatorio; los demás filtros son opcionales.
-   */
-  async sales({ dateFrom, dateTo, venue, product, category } = {}) {
-    const params = { date_from: dateFrom, date_to: dateTo }
-    if (venue) params.venue = venue
-    if (product) params.product = product
-    if (category) params.category = category
-
+  async ownSales(params) {
+    const { data } = await api.get('/reports/sales/own/', { params })
+    return data
+  },
+  async sales(params) {
     const { data } = await api.get('/reports/sales/', { params })
     return data
+  },
+  async exportSales(params) {
+    const { data } = await api.get('/reports/sales/', { params: { ...params, export: 'csv' }, responseType: 'blob' })
+    const url = URL.createObjectURL(data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'sales-report.csv'
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   },
 }

@@ -72,6 +72,39 @@ class UpdateProductTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_no_se_reduce_venta_por_debajo_de_compra(self):
+        response = self.client.patch(self.url, {"sale_price": 3499}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("sale_price", response.data)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.sale_price, 9000)
+        self.assertFalse(AuditEvent.objects.filter(event_type=EventType.PRODUCT_UPDATED).exists())
+
+    def test_no_se_aumenta_compra_por_encima_de_venta(self):
+        response = self.client.patch(self.url, {"purchase_price": 9001}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.purchase_price, 3500)
+
+    def test_se_permite_igualar_venta_a_compra_al_editar(self):
+        response = self.client.patch(self.url, {"sale_price": 3500}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.sale_price, self.product.purchase_price)
+
+    def test_se_comparan_ambos_precios_nuevos_al_editar(self):
+        response = self.client.patch(
+            self.url, {"purchase_price": 12000, "sale_price": 14000}, format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.purchase_price, 12000)
+        self.assertEqual(self.product.sale_price, 14000)
+
     def test_conservar_el_propio_nombre_no_se_considera_duplicado(self):
         """Editar otros campos sin tocar el nombre no debe fallar."""
         response = self.client.patch(

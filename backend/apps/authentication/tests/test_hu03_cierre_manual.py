@@ -67,7 +67,7 @@ class LogoutTests(APITestCase):
             event_type=EventType.SESSION_DISCONNECTED
         ).first()
         self.assertIsNotNone(evento)
-        self.assertIn("conexión", evento.description.lower())
+        self.assertIn("connection", evento.description.lower())
 
     def test_el_motivo_por_defecto_es_el_cierre_manual(self):
         """Si no se indica motivo, se asume cierre manual."""

@@ -182,7 +182,7 @@ class CreateUserTests(APITestCase):
         self.assertIsNotNone(evento)
         self.assertEqual(evento.user, self.admin)
         self.assertIn("mesero1", evento.description)
-        self.assertIn("Mesero", evento.description)
+        self.assertIn("Waiter", evento.description)
         self.assertIn("Galería", evento.description)
 
     def test_la_respuesta_no_expone_la_contrasena(self):

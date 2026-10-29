@@ -52,9 +52,6 @@ class TableViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.action not in ("list",):
-            return queryset
-
         # Cajero y Mesero solo ven las mesas de su sede asignada.
         if self.request.user.role != Role.ADMIN:
             queryset = queryset.filter(venue=self.request.user.venue)
@@ -63,7 +60,7 @@ class TableViewSet(
             if venue_id:
                 queryset = queryset.filter(venue_id=venue_id)
 
-        if self.request.query_params.get("include_inactive") != "true":
+        if self.action == "list" and self.request.query_params.get("include_inactive") != "true":
             queryset = queryset.filter(is_active=True)
 
         return queryset
@@ -76,12 +73,12 @@ class TableViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Creación de la mesa '{table.identifier}' en la sede "
+                f"Created table '{table.identifier}' at venue "
                 f"'{table.venue.name}'."
             ),
-            venue=table.venue,
             request=self.request,
         )
 
@@ -96,12 +93,12 @@ class TableViewSet(
             username=self.request.user.username,
             user=self.request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Edición de la mesa en la sede '{table.venue.name}'. "
+                f"Updated table at venue '{table.venue.name}'. "
                 f"identifier: '{previous_identifier}' -> '{table.identifier}'."
             ),
-            venue=table.venue,
             request=self.request,
         )
 
@@ -135,12 +132,12 @@ class TableViewSet(
             username=request.user.username,
             user=request.user,
             entity="Table",
+            venue=table.venue,
             entity_id=table.id,
             description=(
-                f"Inactivación de la mesa '{table.identifier}' en la sede "
+                f"Deactivated table '{table.identifier}' at venue "
                 f"'{table.venue.name}'."
             ),
-            venue=table.venue,
             request=request,
         )
 
@@ -166,7 +163,7 @@ class TableViewSet(
             .prefetch_related(
                 Prefetch(
                     "orders",
-                    queryset=Order.objects.filter(status=OrderStatus.OPEN),
+                    queryset=Order.objects.filter(status__in=[OrderStatus.OPEN, OrderStatus.IN_CASHIER]),
                     to_attr="open_orders",
                 )
             )

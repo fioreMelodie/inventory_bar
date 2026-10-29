@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
-import PaymentDialog from '../components/PaymentDialog'
+import CashPaymentDialog from '../components/CashPaymentDialog'
+import CardPaymentDialog from '../components/CardPaymentDialog'
+import { Banknote, CreditCard, ReceiptText } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../services/api'
 import { ordersService } from '../services/orders'
@@ -11,12 +13,15 @@ import { formatPrice, productsService } from '../services/products'
  * HU19 - Detalle del pedido abierto.
  * HU20 - Agregar productos y cantidades al pedido.
  * HU21 - Enviar el pedido a caja.
- * HU23 - El cajero cobra el pedido desde el detalle.
  */
 export default function OrderDetailPage() {
   const { orderId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const backToQueue = user.role === 'CASHIER' || location.state?.from === '/cashier/pending'
+  const backPath = backToQueue ? '/cashier/pending' : '/room'
+  const backLabel = backToQueue ? 'Back to pending orders' : 'Back to the room'
 
   const [order, setOrder] = useState(null)
   const [products, setProducts] = useState([])
@@ -32,15 +37,13 @@ export default function OrderDetailPage() {
   const [confirmingSend, setConfirmingSend] = useState(false)
   const [sendError, setSendError] = useState('')
   const [sending, setSending] = useState(false)
-
-  // HU23 - Cobro del pedido.
-  const [charging, setCharging] = useState(false)
-  const [invoice, setInvoice] = useState(null)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const canPay = order?.status === 'IN_CASHIER' && ['ADMIN', 'CASHIER'].includes(user.role)
 
   const isOpen = order?.status === 'OPEN'
-  const canEdit = isOpen && (order?.waiter === user.id || user.role === 'ADMIN')
-  const canCharge =
-    order?.status === 'IN_CASHIER' && ['CASHIER', 'ADMIN'].includes(user.role)
+  const canEdit = isOpen && (user.role === 'ADMIN' ||
+    (user.role === 'WAITER' && order?.waiter === user.id))
 
   useEffect(() => {
     loadData()
@@ -49,6 +52,8 @@ export default function OrderDetailPage() {
 
   async function loadData() {
     setLoading(true)
+    setOrder(null)
+    setError('')
     try {
       const [orderData, productList] = await Promise.all([
         ordersService.retrieve(orderId),
@@ -65,7 +70,7 @@ export default function OrderDetailPage() {
 
   async function addProduct(product) {
     setError('')
-    const quantity = Number(quantities[product.id] ?? 1)
+    const quantity = Number(quantities[product.id] || 1)
 
     if (!Number.isInteger(quantity) || quantity < 1) {
       setError('Quantity must be a whole number of units, greater than zero.')
@@ -99,10 +104,17 @@ export default function OrderDetailPage() {
     }
   }
 
-  function handlePaid(generatedInvoice) {
-    setInvoice(generatedInvoice)
-    setCharging(false)
-    loadData()
+  async function cancelOrder() {
+    setSendError('')
+    setSending(true)
+    try {
+      await ordersService.cancel(order.id)
+      navigate('/room')
+    } catch (requestError) {
+      setSendError(getErrorMessage(requestError, 'Unable to cancel this order.'))
+    } finally {
+      setSending(false)
+    }
   }
 
   const categories = [...new Set(products.map((product) => product.category))].sort()
@@ -127,8 +139,8 @@ export default function OrderDetailPage() {
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error || 'Order not found.'}
         </p>
-        <Link to="/room" className="mt-4 inline-block text-sm text-brand-700 underline">
-          Back to the room
+        <Link to={backPath} className="mt-4 inline-block text-sm text-brand-700 underline">
+          {backLabel}
         </Link>
       </main>
     )
@@ -136,8 +148,8 @@ export default function OrderDetailPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <Link to="/room" className="text-sm text-brand-700 underline">
-        Back to the room
+      <Link to={backPath} className="text-sm text-brand-700 underline">
+        {backLabel}
       </Link>
 
       <header className="mt-4 flex flex-wrap items-start justify-between gap-3">
@@ -158,7 +170,7 @@ export default function OrderDetailPage() {
               : 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600'
           }
         >
-          {order.status_label}
+            {{ OPEN: 'Open', IN_CASHIER: 'In cashier', CANCELLED: 'Cancelled', PAID: 'Paid' }[order.status]}
         </span>
       </header>
 
@@ -168,10 +180,22 @@ export default function OrderDetailPage() {
         </p>
       )}
 
+      {canPay && <div className="order-payment-action">
+        <span className="status-pill amber">Awaiting payment</span>
+        <div className="payment-method-actions">
+          <button className="secondary-button" onClick={() => setPaying('cash')}><Banknote size={18} /> Pay in cash</button>
+          <button className="primary-button" onClick={() => setPaying('card')}><CreditCard size={18} /> Pay by card</button>
+        </div>
+      </div>}
+      {order.status === 'PAID' && order.receipt && <div className="order-payment-action">
+        <span className="status-pill green">Paid</span>
+        <Link to={'/invoices/' + order.receipt.id} className="primary-button"><ReceiptText size={17} /> View receipt</Link>
+      </div>}
+
       <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-5">
           <h2 className="text-base font-medium text-slate-900">Items</h2>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-slate-500">
               Total:{' '}
               <span className="text-base font-semibold text-slate-900">
@@ -179,16 +203,14 @@ export default function OrderDetailPage() {
               </span>
             </p>
 
-            {canCharge && (
-              <button
-                type="button"
-                onClick={() => setCharging(true)}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-              >
-                Charge
+            {canEdit && (
+              <button type="button" onClick={() => {
+                setSendError('')
+                setConfirmingCancel(true)
+              }} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700">
+                Cancel order
               </button>
             )}
-
             {canEdit && order.items.length > 0 && (
               <button
                 type="button"
@@ -315,7 +337,7 @@ export default function OrderDetailPage() {
                 <button
                   type="button"
                   onClick={() => addProduct(product)}
-                  disabled={adding === product.id}
+                  disabled={adding !== null || sending}
                   className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:bg-slate-300"
                 >
                   {adding === product.id ? 'Adding…' : 'Add'}
@@ -328,34 +350,12 @@ export default function OrderDetailPage() {
 
       {!isOpen && (
         <p className="mt-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">
-          {order.status === 'PAID'
-            ? 'This order has been paid. The table is free again.'
+          {order.status === 'CANCELLED'
+            ? 'This order was cancelled.'
+            : order.status === 'PAID'
+            ? 'This order has been paid and can no longer be modified.'
             : 'This order has been sent to the cashier and can no longer be modified.'}
         </p>
-      )}
-
-      {invoice && (
-        <p
-          role="status"
-          className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
-        >
-          Payment registered. Invoice {invoice.number} was generated
-          {invoice.change_given > 0 ? '. Change: ' + formatPrice(invoice.change_given) : ''}.{' '}
-          <Link
-            to={'/billing/invoices/' + invoice.id}
-            className="font-medium underline"
-          >
-            View invoice
-          </Link>
-        </p>
-      )}
-
-      {charging && (
-        <PaymentDialog
-          order={order}
-          onPaid={handlePaid}
-          onCancel={() => setCharging(false)}
-        />
       )}
 
       {confirmingSend && (
@@ -368,6 +368,25 @@ export default function OrderDetailPage() {
           busy={sending}
           onConfirm={sendToCashier}
           onCancel={() => setConfirmingSend(false)}
+        />
+      )}
+      {paying === 'cash' && canPay && <CashPaymentDialog order={order}
+        onCancel={() => setPaying(false)}
+        onReload={() => { setPaying(false); loadData() }}
+        onPaid={invoice => { setPaying(false); navigate('/invoices/' + invoice.id, { replace: true }) }} />}
+      {paying === 'card' && canPay && <CardPaymentDialog order={order}
+        onCancel={() => setPaying(false)}
+        onReload={() => { setPaying(false); loadData() }}
+        onPaid={invoice => { setPaying(false); navigate('/invoices/' + invoice.id, { replace: true }) }} />}
+      {confirmingCancel && (
+        <ConfirmDialog
+          title="Cancel this order?"
+          message="The stock will be restored and the table will become free."
+          confirmLabel="Cancel order"
+          error={sendError}
+          busy={sending}
+          onConfirm={cancelOrder}
+          onCancel={() => setConfirmingCancel(false)}
         />
       )}
     </main>

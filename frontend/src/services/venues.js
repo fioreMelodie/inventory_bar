@@ -1,13 +1,12 @@
-import api from './api'
+import api, { listAll } from './api'
 
 /** Módulo 2 - Administración de Sedes. */
 export const venuesService = {
   /** Lista las sedes. Con includeInactive se incluyen también las inactivas. */
   async list({ includeInactive = false } = {}) {
-    const { data } = await api.get('/venues/', {
+    return listAll('/venues/', {
       params: includeInactive ? { include_inactive: 'true' } : undefined,
     })
-    return data.results ?? data
   },
 
   /** Crea una sede (HU04). */

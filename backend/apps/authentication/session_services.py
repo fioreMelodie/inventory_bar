@@ -14,19 +14,19 @@ from .models import UserSession
 CLOSING_EVENTS = {
     UserSession.ClosingReason.INACTIVITY: (
         EventType.SESSION_TIMEOUT,
-        "Cierre automático de sesión tras 3 minutos de inactividad.",
+        "Automatic sign-out after 3 minutes of inactivity.",
     ),
     UserSession.ClosingReason.MANUAL: (
         EventType.SESSION_LOGOUT,
-        "El usuario cerró la sesión manualmente.",
+        "The user signed out manually.",
     ),
     UserSession.ClosingReason.DISCONNECTION: (
         EventType.SESSION_DISCONNECTED,
-        "Cierre de sesión por pérdida de conexión a internet.",
+        "Signed out due to a lost internet connection.",
     ),
     UserSession.ClosingReason.USER_DEACTIVATED: (
         EventType.SESSION_REVOKED,
-        "Cierre inmediato de la sesión por inactivación de la cuenta.",
+        "Session immediately revoked because the account was deactivated.",
     ),
 }
 
@@ -49,6 +49,7 @@ def close_session(session, reason, request=None):
         username=session.user.username,
         user=session.user,
         entity="UserSession",
+        venue=session.venue,
         entity_id=session.id,
         description=description,
         request=request,
