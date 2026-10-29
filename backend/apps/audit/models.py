@@ -41,6 +41,7 @@ class EventType(models.TextChoices):
     ORDER_CANCELLED = "ORDER_CANCELLED", "Cancelación de pedido"
     ORDER_ITEM_ADDED = "ORDER_ITEM_ADDED", "Producto agregado a un pedido"
     ORDER_SENT_TO_CASHIER = "ORDER_SENT_TO_CASHIER", "Pedido enviado a caja"
+    PAYMENT_REGISTERED = "PAYMENT_REGISTERED", "Pago registrado y factura generada"
     STOCK_DISCOUNT = "STOCK_DISCOUNT", "Descuento de stock por pedido"
     STOCK_RESTORE = "STOCK_RESTORE", "Reintegro de stock por cancelación"
 
@@ -76,6 +77,16 @@ class AuditEvent(models.Model):
     # usuario inexistente.
     username = models.CharField("nombre de usuario", max_length=150)
     event_type = models.CharField("tipo de evento", max_length=40, choices=EventType.choices)
+    # Sede en la que ocurrió el evento. Queda vacía en las acciones que no
+    # pertenecen a ninguna sede, como la parametrización global del catálogo.
+    venue = models.ForeignKey(
+        "locations.Venue",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_events",
+        verbose_name="sede",
+    )
     entity = models.CharField("entidad afectada", max_length=60, blank=True)
     entity_id = models.CharField("id de la entidad", max_length=40, blank=True)
     description = models.TextField("descripción", blank=True)
@@ -91,6 +102,8 @@ class AuditEvent(models.Model):
         indexes = [
             models.Index(fields=["event_type", "created_at"]),
             models.Index(fields=["username"]),
+            # El log se consulta filtrando por sede y fecha (HU30).
+            models.Index(fields=["venue", "created_at"], name="audit_venue_date_idx"),
         ]
 
     def __str__(self):

@@ -5,6 +5,7 @@ HU19: Crear pedido (Mesero).
 HU16: Descuento automático de stock y reintegro al cancelar.
 HU20: Agregar productos a un pedido.
 HU21: Enviar pedido a caja.
+HU22: Consultar pedidos activos (Cajero).
 """
 from django.db import transaction
 from django.utils import timezone
@@ -81,6 +82,11 @@ class OrderViewSet(
         if order_status:
             queryset = queryset.filter(status=order_status)
 
+            # El panel de caja se atiende en orden de llegada, por lo que los
+            # pedidos enviados se ordenan por hora de envío ascendente (HU22).
+            if order_status == OrderStatus.IN_CASHIER:
+                queryset = queryset.order_by("sent_to_cashier_at")
+
         table_id = self.request.query_params.get("table")
         if table_id:
             queryset = queryset.filter(table_id=table_id)
@@ -113,6 +119,7 @@ class OrderViewSet(
                 f"Apertura del pedido {order.id} en la mesa '{table.identifier}' "
                 f"de la sede '{table.venue.name}'."
             ),
+            venue=table.venue,
             request=request,
         )
 
@@ -158,6 +165,7 @@ class OrderViewSet(
                 f"Cancelación del pedido {order.id} de la mesa "
                 f"'{table.identifier}'. El stock descontado fue reintegrado."
             ),
+            venue=order.venue,
             request=request,
         )
 
@@ -209,8 +217,9 @@ class OrderViewSet(
                     order=order,
                     product=product,
                     defaults={
-                        # El precio se congela al momento de agregar el ítem.
+                        # Precio y costo se congelan al agregar el ítem.
                         "unit_price": product.sale_price,
+                        "unit_cost": product.purchase_price,
                         "quantity": quantity,
                     },
                 )
@@ -232,6 +241,7 @@ class OrderViewSet(
                 f"Se agregaron {quantity} unidades de '{product.name}' al pedido "
                 f"{order.id}. Total del pedido: {order.total}."
             ),
+            venue=order.venue,
             request=request,
         )
 
@@ -283,6 +293,7 @@ class OrderViewSet(
                 f"Envío a caja del pedido {order.id} de la mesa "
                 f"'{order.table.identifier}'. Total: {order.total}."
             ),
+            venue=order.venue,
             request=request,
         )
 

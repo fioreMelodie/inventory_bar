@@ -56,6 +56,22 @@ python manage.py runserver
 
 API disponible en `http://localhost:8000/api/`
 
+#### Datos de demostración
+
+Para trabajar con información realista en lugar de una base vacía:
+
+```bash
+python manage.py seed_demo
+```
+
+Carga las tres sedes, usuarios de los tres roles, proveedores, catálogo,
+existencias, mesas y pedidos en distintos estados. Todas las cuentas de
+demostración usan la contraseña `Cafe2026*Bar`.
+
+El comando no elimina ni duplica nada: si un registro ya existe, lo reutiliza,
+así que se puede ejecutar las veces que haga falta. Con `--sin-pedidos` carga
+solo el maestro.
+
 ### Frontend
 
 ```bash
