@@ -134,6 +134,21 @@ input, select, textarea { accent-color: #176b52; }
 .quick-link:hover { color: #176b52; }
 .empty-state { min-height: 180px; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; color: #819287; font-size: 13px; }
 .empty-cell { height: 180px; text-align: center; }
+.algorithm-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 14px; margin: 28px 0; padding: 18px 0; border-block: 1px solid #dfe6e1; }
+.algorithm-controls label { display: grid; gap: 7px; font-size: 12px; color: #617067; }
+.algorithm-controls button { min-height: 40px; white-space: nowrap; }
+.algorithm-section { margin: 32px 0; }
+.algorithm-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.algorithm-columns article { min-width: 0; border-top: 3px solid #176b52; border-bottom: 1px solid #dfe6e1; padding: 16px 0; }
+.algorithm-columns h3 { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #33453a; }
+.algorithm-columns p { color: #7b887f; font-size: 11px; line-height: 1.5; margin-top: 8px; }
+.algorithm-list { margin-top: 14px; padding-left: 22px; font-size: 12px; color: #53635a; }
+.algorithm-list li { padding: 7px 0; border-bottom: 1px solid #edf1ee; display: flex; justify-content: space-between; gap: 10px; }
+.algorithm-list span { color: #849087; white-space: nowrap; }
+.algorithm-result { color: #31483a !important; font-size: 12px !important; min-height: 30px; }
+.algorithm-summary { display: flex; flex-wrap: wrap; gap: 26px; padding: 16px 0; border-bottom: 1px solid #dfe6e1; font-size: 12px; color: #77837b; }
+.algorithm-summary strong { display: block; color: #2d4135; margin-top: 4px; font-size: 15px; }
+.cash-suggestion { margin: -2px 0 14px; color: #647369; font-size: 11px; line-height: 1.5; }
 .error-banner { display: flex; align-items: center; gap: 12px; padding: 14px; margin-bottom: 20px; background: #fef1f0; color: #a23735; border-radius: 6px; font-size: 13px; }
 .error-banner button { margin-left: auto; text-decoration: underline; flex-shrink: 0; }
 .skeleton { display: inline-block; background: #edf1ee; animation: pulse 1.5s ease-in-out infinite; }

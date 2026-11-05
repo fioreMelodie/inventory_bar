@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ArrowUpRight, BarChart3, BookOpen, Boxes, Building2, ChevronRight, Coffee, LayoutDashboard, LogOut, Menu, ReceiptText, ShieldCheck, Table2, Truck, Users, Wifi, WifiOff, X } from 'lucide-react'
+import { ArrowUpRight, BarChart3, Binary, BookOpen, Boxes, Building2, ChevronRight, Coffee, LayoutDashboard, LogOut, Menu, ReceiptText, ShieldCheck, Table2, Truck, Users, Wifi, WifiOff, X } from 'lucide-react'
 import { ROLE_LABELS, useAuth } from '../context/AuthContext'
 import useConnectionStatus from '../hooks/useConnectionStatus'
 import ConnectionLostDialog from './ConnectionLostDialog'
 
 const ITEMS = [
   { to: '/audit/events', label: 'Event log', icon: ShieldCheck, group: 'Audit', roles: ['ADMIN'] },
+  { to: '/algorithms', label: 'Algorithms', icon: Binary, group: 'Audit', roles: ['ADMIN'] },
   { to: '/reports/my-sales', label: 'Sales report', icon: BarChart3, group: 'Reports', roles: ['CASHIER'] },
   { to: '/reports/sales', label: 'Sales report', icon: BarChart3, group: 'Reports', roles: ['ADMIN'] },
   { to: '/cashier/pending', label: 'Pending orders', icon: ReceiptText, group: 'Operations', roles: ['ADMIN', 'CASHIER'] },
