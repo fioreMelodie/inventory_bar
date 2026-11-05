@@ -7,6 +7,7 @@ import InvoicePage from './pages/InvoicePage'
 import InvoicesPage from './pages/InvoicesPage'
 import SalesReportPage from './pages/SalesReportPage'
 import AuditEventsPage from './pages/AuditEventsPage'
+import AlgorithmsPage from './pages/AlgorithmsPage'
 import LoginPage from './pages/LoginPage'
 import InventoryPage from './pages/InventoryPage'
 import OrderDetailPage from './pages/OrderDetailPage'
@@ -26,6 +27,7 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/audit/events" element={<ProtectedRoute roles={['ADMIN']}><AuditEventsPage /></ProtectedRoute>} />
+        <Route path="/algorithms" element={<ProtectedRoute roles={['ADMIN']}><AlgorithmsPage /></ProtectedRoute>} />
         <Route path="/reports/my-sales" element={<ProtectedRoute roles={['CASHIER']}><SalesReportPage /></ProtectedRoute>} />
         <Route path="/reports/sales" element={<ProtectedRoute roles={['ADMIN']}><SalesReportPage /></ProtectedRoute>} />
         <Route path="/invoices" element={<ProtectedRoute roles={['ADMIN', 'CASHIER']}><InvoicesPage /></ProtectedRoute>} />

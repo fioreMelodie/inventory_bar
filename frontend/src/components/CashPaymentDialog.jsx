@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Banknote, LoaderCircle } from 'lucide-react'
 import { getErrorMessage } from '../services/api'
 import { paymentsService } from '../services/payments'
+import { algorithmsService } from '../services/algorithms'
 import { formatPrice } from '../services/products'
 
 export default function CashPaymentDialog({ order, onCancel, onPaid, onReload }) {
@@ -15,10 +16,24 @@ export default function CashPaymentDialog({ order, onCancel, onPaid, onReload })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [conflict, setConflict] = useState(false)
+  const [changeSuggestion, setChangeSuggestion] = useState([])
   const amount = Number(received)
   const valid = received.trim() !== '' && Number.isSafeInteger(amount) && amount >= order.total && amount <= 2147483647
 
   useEffect(() => { dialog.current?.showModal() }, [])
+  useEffect(() => {
+    if (!valid || amount === order.total) {
+      setChangeSuggestion([])
+      return undefined
+    }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      algorithmsService.change(amount - order.total)
+        .then(result => { if (!cancelled) setChangeSuggestion(result.breakdown) })
+        .catch(() => { if (!cancelled) setChangeSuggestion([]) })
+    }, 250)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [amount, valid, order.total])
   function cancel() {
     if (busyRef.current) return
     dialog.current?.close()
@@ -72,6 +87,7 @@ export default function CashPaymentDialog({ order, onCancel, onPaid, onReload })
           value={received} onChange={event => { setReceived(event.target.value); setError(''); setConflict(false) }}
           autoFocus disabled={busy} aria-invalid={!!error} aria-describedby={error ? errorId : undefined} />
         <dl className="cash-breakdown"><div><dt>Change</dt><dd aria-live="polite">{valid ? formatPrice(amount - order.total) : '--'}</dd></div></dl>
+        {changeSuggestion.length > 0 && <p className="cash-suggestion" aria-live="polite">Suggested denominations: {changeSuggestion.map(item => `${item.count} × ${formatPrice(item.denomination)}`).join(', ')}</p>}
         {error && <p id={errorId} role="alert" className="cash-error">{error}</p>}
         {conflict && <button type="button" className="text-link mt-3" onClick={() => { dialog.current?.close(); onReload() }}>Reload order</button>}
         <div className="dialog-actions">

@@ -28,6 +28,7 @@ urlpatterns = [
     path("api/", include("apps.orders.urls")),
     path("api/", include("apps.payments.urls")),
     path("api/", include("apps.audit.urls")),
+    path("api/", include("apps.algorithms.urls")),
 ]
 
 # Imágenes de producto cargadas por el usuario. En producción también las sirve
